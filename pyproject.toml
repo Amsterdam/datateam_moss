@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dq-suite-amsterdam"
+version = "0.0.10"
+authors = [
+  { name="Arthur Kordes", email="a.kordes@amsterdam.nl" },
+]
+description = "Wrapper for Great Expectations to fit the requirements of the Gemeente Amsterdam."
+readme = "README.md"
+requires-python = ">=3.10"
