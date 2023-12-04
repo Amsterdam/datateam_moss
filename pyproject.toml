@@ -8,6 +8,6 @@ version = "0.0.10"
 authors = [
   { name="Robbin Breeuwer", email="r.j.breeuwer@amsterdam.nl" },
 ]
-description = "Functions needed for datateam MOSS (municipality of Amsterdam"
+description = "Functions needed for datateam MOSS (municipality of Amsterdam)"
 readme = "README.md"
 requires-python = ">=3.10"
