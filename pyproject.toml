@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "dq-suite-amsterdam"
 version = "0.0.10"
 authors = [
-  { name="Arthur Kordes", email="a.kordes@amsterdam.nl" },
+  { name="Robbin Breeuwer", email="r.j.breeuwer@amsterdam.nl" },
 ]
-description = "Wrapper for Great Expectations to fit the requirements of the Gemeente Amsterdam."
+description = "Functions needed for datateam MOSS (municipality of Amsterdam"
 readme = "README.md"
 requires-python = ">=3.10"
