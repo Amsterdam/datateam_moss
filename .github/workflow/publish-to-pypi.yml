@@ -13,6 +13,7 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: "3.x"
+        
     - name: Install pypa/build
       run: >-
         python3 -m
@@ -35,7 +36,7 @@ jobs:
     # Specifying a GitHub environment is optional, but strongly encouraged
     environment:
       name: production
-      url: https://pypi.org/p/dq-suite-amsterdam
+      url: https://pypi.org/p/datateam_moss
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
