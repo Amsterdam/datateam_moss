@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dq-suite-amsterdam"
+name = "datateam_moss"
 version = "0.0.10"
 authors = [
   { name="Robbin Breeuwer", email="r.j.breeuwer@amsterdam.nl" },
