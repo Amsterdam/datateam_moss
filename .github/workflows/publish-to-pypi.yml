@@ -18,17 +18,18 @@ jobs:
       run: |
         echo "Pull request has been accepted and merged into the main branch!"
 
-        # Install bump2version
-        pip install bump2version
+        # Install jq
+        sudo apt-get update
+        sudo apt-get install jq
 
         # Parse the current version from the TOML file
-        current_version=$(toml get pyproject.toml project.version)
+        current_version=$(jq -r '.project.version' pyproject.toml)
 
         # Bump the version (you can adjust the part to bump: major, minor, or patch)
         bump2version patch
 
         # Parse the new version
-        new_version=$(toml get pyproject.toml project.version)
+        new_version=$(jq -r '.project.version' pyproject.toml)
 
         echo "Bumped version from $current_version to $new_version"
 
