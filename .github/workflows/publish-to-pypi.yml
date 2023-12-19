@@ -18,6 +18,20 @@ jobs:
       run: |
         echo "Pull request has been accepted and merged into the main branch!"
 
+        # Install bump2version
+        pip install bump2version
+
+        # Parse the current version from the TOML file
+        current_version=$(toml get pyproject.toml project.version)
+
+        # Bump the version (you can adjust the part to bump: major, minor, or patch)
+        bump2version patch
+
+        # Parse the new version
+        new_version=$(toml get pyproject.toml project.version)
+
+        echo "Bumped version from $current_version to $new_version"
+
     - name: Checkout code
       uses: actions/checkout@v4
 
