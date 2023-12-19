@@ -40,9 +40,6 @@ def toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam
         naam_nieuw_df (str, verplicht bij opgegeven Python DataFrames): Naam van DataFrame/Tabel zoals die opgeslagen is in het opgegeven schema/catalog
         huidig_dwh (str, optioneel): Naam van het huidige DWH DataFrame. Indien niet opgegeven, wordt
                                      de huidige tabelnaam van 'nieuw_df' gebruikt (komt overeen met het DWH).
-
-    Laatste update: 04-12-2023
-
     Raises:
         ValueError: Als de tabel/dataframe-naam niet kan worden afgeleid vanuit het object. 
                     Indien je bij nieuw_df een Python DataFrame meegeeft, moet je de naam van de tabel geven 
