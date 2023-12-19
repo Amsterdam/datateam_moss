@@ -18,14 +18,6 @@ jobs:
         run: |
           echo "Pull request has been accepted and merged into the main branch!"
 
-          # Install bump2version
-          pip install bump2version
-
-      - name: Bump version
-        run: |
-          # Bump the version (you can adjust the part to bump: major, minor, or patch)
-          bump2version patch 
-
       - name: Checkout code
         uses: actions/checkout@v4
 
