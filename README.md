@@ -4,7 +4,7 @@ In deze package staan functies die door het datateam MOSS+ van de gemeente Amste
 
 # 2. Vereiste
 Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillende directies; waaronder de directie Data. Binnen de directie data is er in besloten om het datalandschap te moderniseren. Hiervoor is er gekozen om over te stappen naar Databricks. De functies die jij aanroept via deze packages zijn gemaakt/getest op de Azure Databricks omgeving. Andere omgevingen of andere, niet hieronder genoemde, clusterconfiguraties worden niet gesupport. 
-
+gg
 # 3. Overzicht
 ## 3.2 
 
