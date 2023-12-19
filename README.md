@@ -10,6 +10,9 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
 | Singe User | Multi node | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
 
+## 2.2 Disclaimers
+- Deze repo is in de Proof of Concept fase
+
 # 3. Overzicht
 
 ## 3.1 Historisering
@@ -65,12 +68,4 @@ Op dit moment is er 1 functie beschikbaar. Deze functies schoont kolomnamen op:
 
 ```python
 dpms.clean_columnames(cols)
-```
-
-# 
-
-# 3. Disclaimers
-- Deze repo is in de Proof of Concept fase
-- De functies kunnen alleen gebruikt worden met een Personal Compute Cluster
-
-        
+```      
