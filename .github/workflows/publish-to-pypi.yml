@@ -24,7 +24,7 @@ jobs:
       - name: Bump version
         run: |
           # Bump the version (you can adjust the part to bump: major, minor, or patch)
-          bump2version patch
+          bump2version --current-version 0.0.13 patch pyproject.toml
 
       - name: Checkout code
         uses: actions/checkout@v4
