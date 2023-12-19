@@ -17,32 +17,32 @@ jobs:
           github.event.pull_request.base.ref == 'main'
         run: |
           echo "Pull request has been accepted and merged into the main branch!"
-
+          
           # Install bump2version
           pip install bump2version
 
           # Bump the version (you can adjust the part to bump: major, minor, or patch)
           bump2version patch
 
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.x"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
 
-    - name: Install pypa/build
-      run: python -m pip install build --user
+      - name: Install pypa/build
+        run: python -m pip install build --user
 
-    - name: Build a binary wheel and a source tarball
-      run: python -m build
+      - name: Build a binary wheel and a source tarball
+        run: python -m build
 
-    - name: Store the distribution packages
-      uses: actions/upload-artifact@v3
-      with:
-        name: python-package-distributions
-        path: dist/
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-package-distributions
+          path: dist/
 
   publish-to-pypi:
     name: upload release to PyPI
