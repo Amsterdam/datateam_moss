@@ -26,11 +26,11 @@ Voor het gebruik van de historisering functies volg het volgende stappenplan:
 # Wanneer jij de package geïnstalleerd hebt, moet je de package nog inladen.
 import dpms
 
-# Nu kan je de verschillende functies aanroepen. De regisseurfunctie voor historisering is toepassen_historisering(). Dit doe je als volgt:
+# Nu kan je de verschillende functies aanroepen. De regisseursfunctie voor historisering is toepassen_historisering(). Dit doe je als volgt:
 dpms.toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam_nieuw_df=None, huidig_dwh: str = None):
 
 
-# Hieronder nog de documentatie van regisseurfunctie. Je zou dit zelf ook kunnen opzoeken in de /src-map.
+# Hieronder nog de documentatie van regisseursfunctie. Je zou dit zelf ook kunnen opzoeken in de /src-map.
 def toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam_nieuw_df=None, huidig_dwh: str = None):
     """
     Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en heeft hiermee de controle over de uitvoering van het historiseringsproces.
