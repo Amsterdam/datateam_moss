@@ -6,9 +6,10 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 
 ## 2.1 Geteste Databricks Cluster Configuraties
 
-|Access mode | Node | Databricks Runtime version | Worker type | Min Workers | Max Workers | Driver type |
-| ------ | ------ | ------ | ------ | ------ | ------ | ------ |
-| Singe User | Multi node | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
+| Cluster Configuratie nr |Access mode | Node | Databricks Runtime version | Worker type | Min Workers | Max Workers | Driver type |
+| ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
+| cluster_configuratie_1 | Singe User | Multi node | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
+| cluster_configuratie_2 | Singe User | Single | Runtime: 14.2 (includes Apache Spark 3.5.0, Scala 2.12) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 1 | 1 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
 
 ## 2.2 Disclaimers
 >> **Deze repo zit in de Proof of Concept fase** 
