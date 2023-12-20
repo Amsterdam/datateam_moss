@@ -35,7 +35,8 @@ dpms.toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naa
 # Hieronder nog de documentatie van regisseursfunctie. Je zou dit zelf ook kunnen opzoeken in de /src-map.
 def toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam_nieuw_df=None, huidig_dwh: str = None):
     """
-    Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en heeft hiermee de controle over de uitvoering van het historiseringsproces.
+    Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en
+    heeft hiermee de controle over de uitvoering van het historiseringsproces.
 
     Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar een SQL temporary view of Python DataFrame.
     Wanneer jij bij nieuw_df een Python DataFrame opgeeft, moet je verplicht naam_nieuw_df invullen.
