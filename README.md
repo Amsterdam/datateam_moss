@@ -8,15 +8,15 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 
 | Cluster Configuratie nr |Access mode | Node | Databricks Runtime version | Worker type | Min Workers | Max Workers | Driver type |
 | ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
-| cluster_configuratie_1 | Singe User | Multi node | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
-| cluster_configuratie_2 | Singe User | Single | Runtime: 14.2 (includes Apache Spark 3.5.0, Scala 2.12) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 1 | 1 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
+| cluster_configuratie_1 | Single User | Multi node | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
+| cluster_configuratie_2 | Single User | Single | Runtime: 14.2 (includes Apache Spark 3.5.0, Scala 2.12) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 1 | 1 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
 
 ## 2.2 Performance
 
 
-| Cluster Configuratie nr | n_records | tijd |
-| ------ | ------ | ------ |
-|        |10.000.000 |     |
+| Cluster Configuratie nr | n_records | deel | tijd | 
+| ------ | ------ | ------ | ------ |
+| cluster_configuratie_2 | 5.000.000 | initialiseren | 1.35 min |
 
 ## 2.3 Disclaimers
 >> **Deze repo zit in de Proof of Concept fase** 
