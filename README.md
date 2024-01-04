@@ -12,9 +12,11 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 | cluster_configuratie_2 | Singe User | Single | Runtime: 14.2 (includes Apache Spark 3.5.0, Scala 2.12) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 1 | 1 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
 
 ## 2.2 Performance
-| n_records | tijd |
-| ------ | ------ |
-|10.000.000 |     |
+
+
+| Cluster Configuratie nr | n_records | tijd |
+| ------ | ------ | ------ |
+|        |10.000.000 |     |
 
 ## 2.3 Disclaimers
 >> **Deze repo zit in de Proof of Concept fase** 
