@@ -34,7 +34,9 @@ Voor het gebruik van de historisering functies volg het volgende stappenplan:
 !pip install datateam-moss
 
 #### Let op! ####
-# Het beste is om de package de installeren op jouw cluster. De MOSS Package staat op PyPi dus dit kan je zonder problemen installeren op jouw cluster.
+# Het beste is om de package de installeren op jouw cluster.
+# De MOSS Package staat op PyPi dus wanneer je dit op jouw cluster wilt installeren,
+# kies het PyPi-menu voor het installeren van de package.
 #### Let op! ####
 
 # Wanneer jij de package geïnstalleerd hebt, moet je de package nog inladen.
