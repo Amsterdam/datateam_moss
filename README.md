@@ -17,6 +17,8 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 | Cluster Configuratie nr | n_records | deel | tijd | 
 | ------ | ------ | ------ | ------ |
 | cluster_configuratie_2 | 5.000.000 | initialiseren | 1.35 min |
+| cluster_configuratie_2 | 7.000.000 | initialiseren | 2.06 min |
+
 
 ## 2.3 Disclaimers
 >> **Deze repo zit in de Proof of Concept fase** 
