@@ -6,11 +6,19 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 
 ## 2.1 Geteste Databricks Cluster Configuraties
 
-|Access mode | Node | Databricks Runtime version | Worker type | Min Workers | Max Workers | Driver type |
-| ------ | ------ | ------ | ------ | ------ | ------ | ------ |
-| Singe User | Multi node | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
+| Cluster Configuratie nr |Access mode | Node | Databricks Runtime version | Worker type | Min Workers | Max Workers | Driver type |
+| ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
+| cluster_configuratie_1 | Single User | Multi node | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
+| cluster_configuratie_2 | Single User | Single | Runtime: 14.2 (includes Apache Spark 3.5.0, Scala 2.12) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 1 | 1 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
 
-## 2.2 Disclaimers
+## 2.2 Performance
+
+
+| Cluster Configuratie nr | n_records | deel | tijd | 
+| ------ | ------ | ------ | ------ |
+| cluster_configuratie_2 | 5.000.000 | initialiseren | 1.35 min |
+
+## 2.3 Disclaimers
 >> **Deze repo zit in de Proof of Concept fase** 
 
 # 3. Overzicht
@@ -26,17 +34,20 @@ Voor het gebruik van de historisering functies volg het volgende stappenplan:
 # Wanneer jij de package geïnstalleerd hebt, moet je de package nog inladen.
 import dpms
 
-# Nu kan je de verschillende functies aanroepen. De regisseursfunctie voor historisering is toepassen_historisering(). Dit doe je als volgt:
+# Nu kan je de verschillende functies aanroepen. De regisseursfunctie voor historisering is toepassen_historisering().
+# Dit doe je als volgt:
 dpms.toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam_nieuw_df=None, huidig_dwh: str = None):
 
 
 # Hieronder nog de documentatie van regisseursfunctie. Je zou dit zelf ook kunnen opzoeken in de /src-map.
 def toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam_nieuw_df=None, huidig_dwh: str = None):
     """
-    Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en heeft hiermee de controle over de uitvoering van het historiseringsproces.
+    Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en
+    heeft hiermee de controle over de uitvoering van het historiseringsproces.
 
     Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar een SQL temporary view of Python DataFrame.
-    Wanneer jij bij nieuw_df een Python DataFrame opgeeft, moet je verplicht naam_nieuw_df invullen. Aangezien Python geen objectnaam kan afleiden van objecten.
+    Wanneer jij bij nieuw_df een Python DataFrame opgeeft, moet je verplicht naam_nieuw_df invullen.
+    Aangezien Python geen objectnaam kan afleiden van objecten.
     Args:
         nieuw_df (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view met gewijzigde gegeven of een Python DataFrame
         schema_catalog (str): Naam van het schema waar de tabel instaat of opgeslagen moet worden.
@@ -62,7 +73,9 @@ De functie heeft de volgende functionaliteit:
 | record_actief | Deze kolom bepaalt of de record actief is. Het kan namelijk voorkomen dat o.b.v. een identifier dubbele records zijn, waarvan 1 record historisch is. Door deze kolom kan je makkelijker filteren op de actieve records | True |
 | geldig_van | Deze kolom geeft aan vanaf welk moment de record actief is. De tijd wordt aangegeven met de Nederlandse tijdzone en nauwkeurig tot op de seconde | 2023-12-31 23:59:59 | 
 | geldig_tot | Deze kolom geef aan op welk moment de record aangepast is. Als er een aanpassing heeft plaatsgevonden, is dit niet meer het de recenste record. De record wordt gesloten op de aanpassingdatum en er wordt een nieuw record, met de verandering, aangemaakt. | 9999-12-31 23:59:59 |
+| actie | Deze kolom geeft aan wat er met de record gebeurd is: inserted, changed, deleted, reinserted | inserted |
 
+Verder controleert deze functies of de opgegeven business_key uniek is in de aangeleverde tabel. Als er dubbele business keys inzitten kan er niet bepaald worden wat er met de record moet gebeuren.
 
 ## 3.2 Algemene functies
 Op dit moment is er 1 functie beschikbaar. Deze functies schoont kolomnamen op:
