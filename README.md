@@ -31,6 +31,10 @@ Voor het gebruik van de historisering functies volg het volgende stappenplan:
 # Voer dit uit in een databricks cel
 !pip install datateam-moss
 
+#### Let op! ####
+# Het beste is om de package de installeren op jouw cluster. De MOSS Package staat op PyPi dus dit kan je zonder problemen installeren op jouw cluster.
+#### Let op! ####
+
 # Wanneer jij de package geïnstalleerd hebt, moet je de package nog inladen.
 import dpms
 
