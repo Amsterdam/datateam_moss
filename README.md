@@ -8,18 +8,32 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 
 | Cluster Configuratie nr |Access mode | Node | Databricks Runtime version | Worker type | Min Workers | Max Workers | Driver type |
 | ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
-| cluster_configuratie_1 | Single User | Multi node | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
+| cluster_configuratie_1 | Single User | Multi | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
 | cluster_configuratie_2 | Single User | Single | Runtime: 14.2 (includes Apache Spark 3.5.0, Scala 2.12) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 1 | 1 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
 
 ## 2.2 Performance
 
-
 | Cluster Configuratie nr | n_records | deel | tijd | 
 | ------ | ------ | ------ | ------ |
-| cluster_configuratie_2 | 5.000.000 | initialiseren | 1.35 min |
+| cluster_configuratie_1 | 7.000.000 | initialiseren | 1.27 min |
+| cluster_configuratie_1 | 7.000.000 | updaten | 3.43 min |
+| cluster_configuratie_2 | 7.000.000 | initialiseren | x min |
+| cluster_configuratie_2 | 7.000.000 | updaten | x min |
+| cluster_configuratie_2 | 5.000.000 | initialiseren | x min |
+| cluster_configuratie_2 | 5.000.000 | updaten | x min |
+| cluster_configuratie_2 | 2.000.000 | initialiseren | x min |
+| cluster_configuratie_2 | 2.000.000 | updaten | x min |
 
 ## 2.3 Disclaimers
->> **Deze repo zit in de Proof of Concept fase** 
+>> **Deze repo zit in de Proof of Concept fase**
+
+
+## 2.4 Bottlenecks
+> De code is geanalyseerd op onderdelen die veel tijd kosten. Mocht je deze code willen verbeteren, stuur dan een pull request. Verder is de code volledig geoptimaliseerd voor PySpark op databricks.
+
+| Verbeterpunten | Functie | Onderdeel code |
+| ---- | ---- | ---- |
+| Het opslaan van de losse partities kost op dit moment, relatief te meeste tijd | updaten_historisering_dwh | output.write.saveAsTable() | 
 
 # 3. Overzicht
 
