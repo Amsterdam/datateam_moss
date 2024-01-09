@@ -17,7 +17,7 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 | ------ | ------ | ------ | ------ |
 | cluster_configuratie_1 | 7.000.000 | initialiseren | 1.27 min |
 | cluster_configuratie_1 | 7.000.000 | updaten | 3.43 min |
-| cluster_configuratie_2 | 7.000.000 | initialiseren | x min |
+| cluster_configuratie_2 | 7.000.000 | initialiseren | 1.35 min |
 | cluster_configuratie_2 | 7.000.000 | updaten | x min |
 | cluster_configuratie_2 | 5.000.000 | initialiseren | x min |
 | cluster_configuratie_2 | 5.000.000 | updaten | x min |
