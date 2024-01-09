@@ -23,7 +23,7 @@ De code voor het historiseren (Slowly Changing Dimensions Type 2) is (zover moge
 | cluster_configuratie_2 | 5.000.000 | initialiseren | 1.41 min |
 | cluster_configuratie_2 | 5.000.000 | updaten | 8.01 min |
 | cluster_configuratie_2 | 2.000.000 | initialiseren | 0.5 min (32 sec) |
-| cluster_configuratie_2 | 2.000.000 | updaten | 8.69 min |
+| cluster_configuratie_2 | 2.000.000 | updaten | 5.06 min |
 
 
 ## 2.3 Bottlenecks
