@@ -17,6 +17,8 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 | Cluster Configuratie nr | n_records | deel | tijd | 
 | ------ | ------ | ------ | ------ |
 | cluster_configuratie_2 | 5.000.000 | initialiseren | 1.35 min |
+| cluster_configuratie_2 | 7.000.000 | initialiseren | 2.06 min |
+
 
 ## 2.3 Disclaimers
 >> **Deze repo zit in de Proof of Concept fase** 
@@ -32,7 +34,9 @@ Voor het gebruik van de historisering functies volg het volgende stappenplan:
 !pip install datateam-moss
 
 #### Let op! ####
-# Het beste is om de package de installeren op jouw cluster. De MOSS Package staat op PyPi dus dit kan je zonder problemen installeren op jouw cluster.
+# Het beste is om de package de installeren op jouw cluster.
+# De MOSS Package staat op PyPi dus wanneer je dit op jouw cluster wilt installeren,
+# kies het PyPi-menu voor het installeren van de package.
 #### Let op! ####
 
 # Wanneer jij de package geïnstalleerd hebt, moet je de package nog inladen.
