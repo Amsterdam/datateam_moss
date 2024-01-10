@@ -2,33 +2,47 @@
 In deze package staan functies die door het datateam MOSS+ van de gemeente Amsterdam gebruikt worden in de data pipelines. Aangezien dit datateam 4 directies bedient, zijn er dezelfde functies die voor verschillende projecten gebruikt worden. Om te zorgen dat er geen wildgroei ontstaat van losse functies of verschillende versies van dezelfde functies is er gekozen om een package te maken die geïmporteerd kan worden.
 
 # 2. Vereiste
-Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillende directies; waaronder de directie Data. Binnen de directie data is er in besloten om het datalandschap te moderniseren. Hiervoor is er gekozen om over te stappen naar Databricks. De functies die jij aanroept via deze packages zijn gemaakt/getest op de Azure Databricks omgeving. Andere omgevingen of andere, niet hieronder genoemde, clusterconfiguraties worden niet gesupport. 
+Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillende directies; waaronder de directie Data. Binnen de directie data is er in besloten om het datalandschap te moderniseren. Hiervoor is er gekozen om over te stappen naar Databricks. De functies die jij aanroept via deze packages zijn gemaakt/getest op de Azure Databricks omgeving. Andere omgevingen of andere, niet hieronder genoemde, clusterconfiguraties worden (nog) niet gesupport. 
 
 ## 2.1 Geteste Databricks Cluster Configuraties
 
 | Cluster Configuratie nr |Access mode | Node | Databricks Runtime version | Worker type | Min Workers | Max Workers | Driver type |
 | ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
-| cluster_configuratie_1 | Single User | Multi node | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
+| cluster_configuratie_1 | Single User | Multi | Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 2 | 8 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
 | cluster_configuratie_2 | Single User | Single | Runtime: 14.2 (includes Apache Spark 3.5.0, Scala 2.12) | Standard_DS3_v2 (14gb Memory, 4 Cores) | 1 | 1 | Standard_DS3_v2 (14GB Memory, 4 Cores) |
 
 ## 2.2 Performance
-
+De code voor het historiseren (Slowly Changing Dimensions Type 2) is (zover mogelijk) volledig geoptimaliseerd voor PySpark op databricks. Echter kan het zo zijn dat bij grote datasets de functie minder snel werkt. De oplossing, zoals je in de tabel hieronder kunt zien, is het gebruiken van meer computerkracht, workers en multinodes. Het is een afweging die je zelf moet maken: is tijd of zijn kosten belangrijker? 
 
 | Cluster Configuratie nr | n_records | deel | tijd | 
 | ------ | ------ | ------ | ------ |
-| cluster_configuratie_2 | 5.000.000 | initialiseren | 1.35 min |
-| cluster_configuratie_2 | 7.000.000 | initialiseren | 2.06 min |
+| cluster_configuratie_1 | 7.000.000 | initialiseren | 1.27 min |
+| cluster_configuratie_2 | 7.000.000 | initialiseren | 1.35 min |
+| cluster_configuratie_2 | 5.000.000 | initialiseren | 1.41 min |
+| cluster_configuratie_2 | 2.000.000 | initialiseren | 0.5 min (32 sec) |
+| cluster_configuratie_1 | 7.000.000 | updaten | 3.43 min |
+| cluster_configuratie_2 | 7.000.000 | updaten | 10.98 min |
+| cluster_configuratie_2 | 5.000.000 | updaten | 8.01 min |
+| cluster_configuratie_2 | 2.000.000 | updaten | 5.06 min |
 
 
-## 2.3 Disclaimers
->> **Deze repo zit in de Proof of Concept fase** 
+## 2.3 Bottlenecks
+> De code is geanalyseerd op onderdelen die veel tijd kosten. Mocht je deze code willen verbeteren, stuur dan een pull request. 
+
+| Verbeterpunten | Functie | Onderdeel code |
+| ---- | ---- | ---- |
+| Het opslaan van de losse partities kost op dit moment, relatief te meeste tijd | updaten_historisering_dwh | output.write.saveAsTable() | 
 
 # 3. Overzicht Functionaliteiten
-> 3.1 -> Historisering
-> 3.2 -> Algemene functie
-> 3.3 -> Reversed modeling voor logische modellen
+- 3.1 -> Historisering
+- 3.2 -> Algemene functie
+- 3.3 -> Reversed modeling voor logische modellen
+
+## 2.4 Disclaimers
+>> **Deze repo zit in de Proof of Concept fase**
 
 
+# 3. Overzicht
 ## 3.1 Historisering
 In deze repo vind je functies voor het historiseren van tabellen. In het specifiek het toepassen van slowly changing dimensions type 2. 
 Voor het gebruik van de historisering functies volg het volgende stappenplan:
