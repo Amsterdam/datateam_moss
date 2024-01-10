@@ -340,7 +340,7 @@ def toepassen_historisering(bestaande_tabel, schema_catalog: str, business_key: 
     # Maak een set van alle tabellen in het opgegeven schema
     set_tabellen_catalog = {row["tableName"] for row in tabellen_catalog.collect()}
 
-    # Controleer of de opgegeven tabel al bestaat in het opgegeven schema
+    # Controleer of de opgegeven tabel al bestaat in het opgegeven schema#
     if naam_tabel in set_tabellen_catalog:
         print(f"De tabel: {naam_tabel} bevindt zich in de Unity Catalogus onder het volgende schema: {schema_catalog}")
         updaten_historisering_dwh(nieuw_df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel)
