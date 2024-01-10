@@ -91,3 +91,43 @@ Op dit moment is er 1 functie beschikbaar. Deze functies schoont kolomnamen op:
 ```python
 dpms.clean_columnames(cols)
 ```      
+
+## 3.3 Reversed modeling voor logische modellen
+
+##### Gebruik
+```python
+dataset = Dataset(
+    catalog='catalog_name', # bijv. 'dpms_dev'
+    database='schema_name', # bijv. 'silver'
+    project_prefixes=['amis'], 
+    exclude=['test']
+)
+
+dataset.print_eraser_code()
+dataset.print_drawio_code()
+```
+
+
+##### Samenvatting
+Deze code omvat reversed modeling; het geeft de input voor tools voor visuele logische modellen op basis van bestaande tabellen en kolomnamen in Databricks.
+
+##### 1. Het doel van deze code
+Deze code geeft in tekstvorm de input van een visueel logisch model in Eraser.io of DrawIO. Dit maakt reversed modeling mogelijk: eerst worden tabellen in Databricks gemaakt, daarna leidt deze code het model daaruit af. Dit maakt het modelleerproces efficienter.
+
+##### 2. Hoe de code werkt en onderliggende aannames
+De code kijkt binnen een catalog (bv. 'dpms_dev') en binnen een database (bv 'silver') en dan weer binnen een door de eindgebruiker gedefinieerde naam voor een project (bv 'amis' in de tabelnaam) naar een set tabellen en kolomnamen. Dit resulteert in de volgende metadata: 
+1. tabellen met kolommen met namen en datatypes: deze corresponderen exact met Databricks
+2. de relaties tussen die tabellen. Hier zijn enkele aannames gedaan:
+    - Er is sprake van een relatie tussen 2 tabellen, als ze beide een kolom met dezelfde naam hebben
+    - De kardinaliteit (bv. one-to-many) wordt afgeleid van de unieke waarden in deze kolommen. Bijvoorbeeld: voor account_id in tabel 1 is de COUNT gelijk aan de COUNT DISTINCT: per rij is er een unieke account_id, dus dit is een one-to??? relatie. In tabel 2 is de COUNT van account_id hoger dan de COUNT DISTINCT: er is geen unieke id per rij. Dit maakt een one-to-many relatie.
+
+##### 3. Ondersteuning voor tools
+Deze tools worden momenteel ondersteund (dit kan in de toekomst nog uitbreiden):
+- Eraser.IO (ERD Schema from code)
+- DrawIO (CREATE TABLE statement)
+
+##### 4. Toekomstige features
+Deze features staan op de backlog:
+- Een lijst van project prefixes ingeven
+- Project prefixen leeg laten, zodat de hele database (bv. zilveren laag) wordt uitgelezen
+"""
