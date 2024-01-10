@@ -1,4 +1,5 @@
 # Inladen packages
+from databricks.sdk.runtime import *
 import sys
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
@@ -31,7 +32,29 @@ def voeg_aangepaste_surrogaatsleutel_toe(df: DataFrame, max_bestaande_surrogaats
     df = df.withColumn("surrogaat_sleutel", row_number().over(window_spec) + (max_bestaande_surrogaatsleutel or 0))
     return df
 
-def controleer_unieke_waarden(df: DataFrame, business_key: str):
+def genereer_willekeurige_hash(bk_col):
+    """
+    Genereert een willekeurige hash-waarde op basis van de ingevoerde kolom.
+
+    Parameters:
+    - bk_col: Column: De kolom waarop de hash-waarde wordt gegenereerd.
+
+    Returns:
+    - Column: De gegenereerde hash-waarde in hexadecimale representatie.
+    
+    Laatste update: 10-01-2023
+    """
+
+    # Concateneer de invoerkolom met een willekeurige waarde voor extra willekeurigheid
+    geconcateneerde_kolom = (bk_col.cast("string") + rand()).cast("string")
+
+    # Gebruik het SHA-1 hash-algoritme
+    gehashte_kolom = sha1(geconcateneerde_kolom)
+
+    # Geef de hexadecimale representatie van de hash terug
+    return gehashte_kolom.cast("string")
+
+def controle_unieke_bk(df, business_key):
     """
     Controleert of alle waarden in een specifieke kolom uniek zijn in het gegeven DataFrame.
 
@@ -42,21 +65,27 @@ def controleer_unieke_waarden(df: DataFrame, business_key: str):
     Returns:
     - None
 
-    Als het aantal unieke waarden in de kolom niet gelijk is aan het totale aantal rijen,
-    wordt er een melding geprint dat niet alle waarden in de kolom uniek zijn.
+    Error:
+    - ValueError: Als het aantal unieke waarden in de kolom niet gelijk is aan het totale aantal rijen,
+                   wordt er een melding geprint dat niet alle waarden in de kolom uniek zijn.
     
-    Laatste update: 23-11-2023
+    Laatste update: 10-01-2023
     """
-    # Tel het aantal unieke waarden in de kolom
-    aantal_unieke = df.select(col(business_key)).distinct().count()
+
+    # Gebruik van het Window-functie om het aantal voorkomens van elke waarde te tellen
+    window_spec = Window().partitionBy(business_key)
+    df_bk_active_record = (df.filter(col("record_actief") == True).select([business_key, "record_actief"]).distinct())
+    df_with_counts = (df.join(broadcast(df_bk_active_record), [business_key, "record_actief"], "inner")
+                        .select(business_key)
+                        .withColumn("count", count(business_key).over(window_spec))
+                        .filter(col("count") >= 2))   
     
-    # Krijg het totale aantal rijen in het DataFrame
-    totaal_aantal = df.count()
-    
-    # Controleer of het aantal unieke waarden gelijk is aan het totale aantal rijen
-    if aantal_unieke != totaal_aantal:
-        foutmelding = f"Niet alle waarden in de kolom '{business_key}' zijn uniek."
-        raise ValueError(foutmelding)
+    # If-statement om te controleren of er dubbele business_keys zijn
+    if (df_with_counts is None):
+        raise ValueError(f"Niet alle waarden in de kolom '{business_key}' zijn uniek.")
+    else:
+        print("Er zijn geen dubbele business keys gedetecteerd in de opgegeven tabel.")  
+    return
 
 def tijdzone_amsterdam():
     """
@@ -84,39 +113,37 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
         - business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
         - naam_nieuw_df (str): Naam van het nieuwe DataFrame in de catalogus.
 
-    Laatste update: xx-xx-2023
+    Laatste update: 10-01-2023
     """
-    # Controleer of de opgegeven identifier uniek is
-    controleer_unieke_waarden(df=df, business_key=business_key)
-    
     # Controleer of het nieuwe DataFrame de vereiste kolommen bevat
     vereiste_kolommen = ['geldig_van', 'geldig_tot', 'surrogaat_sleutel', 'record_actief', 'actie']
     ontbrekende_kolommen = [kolom for kolom in vereiste_kolommen if kolom not in df.columns]
     
-    if ontbrekende_kolommen:
-        foutmelding = f"Ontbrekende kolommen: {', '.join(ontbrekende_kolommen)}. Deze worden aan het DataFrame toegevoegd..."
-        print(foutmelding)
-        
+    if ontbrekende_kolommen:      
         # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
         huidige_datum_tz = tijdzone_amsterdam()
 
         # Werk de einddatum, record_actief en begindatum kolommen bij in het huidige DataFrame
-        temp_df = df.withColumn("geldig_van", huidige_datum_tz) \
-                    .withColumn("geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss")) \
-                    .withColumn("record_actief", lit(True)) \
+        print(f"Ontbrekende kolommen: {', '.join(ontbrekende_kolommen)}. Deze worden aan het DataFrame toegevoegd...")
+        temp_df = (df.withColumn("geldig_van", huidige_datum_tz) 
+                    .withColumn("geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss")) 
+                    .withColumn("record_actief", lit(True)) 
                     .withColumn("actie", lit("inserted"))
+                    .withColumn("surrogaat_sleutel", genereer_willekeurige_hash(col(business_key)))) 
 
-        # Voeg nieuwe surrogaatsleutels toe op basis van de maximale sleutel in de DWH
-        output = voeg_aangepaste_surrogaatsleutel_toe(temp_df)
-
+        # Controleer of de opgegeven identifier uniek is
+        controle_unieke_bk(df=temp_df, business_key=business_key)
+       
         # Bepaal de juiste volgorde van de kolommen
         volgorde_kolommen = [business_key, "record_actief", "surrogaat_sleutel", "geldig_van", "geldig_tot", "actie"]
-        output_volgorde = bepaal_kolom_volgorde(df = output, gewenste_kolom_volgorde = volgorde_kolommen)
+        output_volgorde, _ = bepaal_kolom_volgorde(df = temp_df, gewenste_kolom_volgorde = volgorde_kolommen)
+        output_volgorde_cached = output_volgorde.cache()
         
         # Sla de gegevens op in delta-formaat in het opgegeven schema
-        print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}")
+        print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}...")
         output_volgorde.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite')
-
+        return
+    
 def bepaal_kolom_volgorde(df: DataFrame, gewenste_kolom_volgorde: list) -> DataFrame: 
     """
     Bepaalt de volgorde van kolommen in een DataFrame op basis van de opgegeven gewenste volgorde.
@@ -127,17 +154,18 @@ def bepaal_kolom_volgorde(df: DataFrame, gewenste_kolom_volgorde: list) -> DataF
 
     Returns:
     - DataFrame: Een nieuw DataFrame met kolommen in de gespecificeerde volgorde.
-    Laatste update: xx-xx-2023
+    Laatste update: 09-01-2023
     """
     # Bepaal de juiste volgorde van de kolommen
     df_kolommen = df.columns
     
     for column in df_kolommen:
         if column not in gewenste_kolom_volgorde:
+            column = column.lower()
             gewenste_kolom_volgorde.append(column)
 
     output_df = df.select(*gewenste_kolom_volgorde)
-    return output_df
+    return output_df, gewenste_kolom_volgorde
 
 def bepaal_veranderde_records(huidig_df: DataFrame, nieuw_df: DataFrame, business_key: str):
     """
@@ -149,45 +177,41 @@ def bepaal_veranderde_records(huidig_df: DataFrame, nieuw_df: DataFrame, busines
         business_key (str): De naam van de kolom die als business_key wordt gebruikt om records te identificeren.
 
     Returns:
-        vier sets: (veranderde, verwijderde, opnieuw_ingevulde, ingevoegde) rij-identificatoren tussen de huidige en nieuwe DataFrames.
-
-    Voorbeeld:
-        huidig_df = spark.createDataFrame([(1, "Alice"), (2, "Bob")], ["account_id", "name"])
-        nieuw_df = spark.createDataFrame([(2, "Bobby"), (3, "Charlie")], ["account_id", "name"])
-        veranderd, verwijderd, opnieuw_ingevuld, ingevoegd = bepaal_veranderde_records(huidig_df, nieuw_df, "account_id")
-        print(veranderd)  # Output: {2}
-    Laatste update: xx-xx-2023
+        vier dataframes
+    Laatste update: 09-01-2023
     """
     
-     # Pas huidig DataFrame aan voor de vergelijking
+    # Pas huidig DataFrame aan voor de vergelijking
     uitzondering_kolom = ["geldig_van", "geldig_tot", "surrogaat_sleutel", "record_actief", "actie"]
     huidig_df_temp = huidig_df.drop(*uitzondering_kolom)
     nieuw_df_temp = nieuw_df.drop(*uitzondering_kolom)
-
+    
     # Maak sets van de huidige en nieuwe business_keys
-    huidige_set_bk = set(huidig_df.select(business_key).distinct().rdd.flatMap(lambda x: x).collect())
-    nieuw_set_bk = set(nieuw_df.select(business_key).distinct().rdd.flatMap(lambda x: x).collect())
+    huidige_bk_df = huidig_df_temp.select(business_key).distinct()
+    nieuw_bk_df = nieuw_df_temp.select(business_key).distinct()
 
     # Identificeer gewijzigde records
-    veranderde_df = nieuw_df_temp.subtract(huidig_df_temp)
-    unieke_bk_set_veranderd = set(veranderde_df.select(business_key).distinct().rdd.flatMap(lambda x: x).collect())
-
+    df_veranderd = nieuw_df_temp.subtract(huidig_df_temp).select(business_key).distinct()
+    
     # Identificeer verwijderde records
-    condition_deleted = col(business_key).isin(huidige_set_bk) & ~col(business_key).isin(nieuw_set_bk)
-    unieke_bk_set_verwijderd = set(huidig_df.filter(condition_deleted).select(business_key).distinct().rdd.flatMap(lambda x: x).collect())
+    df_verwijderd = (huidig_df.join(huidige_bk_df, business_key, 'left_outer') #records in A not in B
+                     .join(nieuw_bk_df, business_key, 'left_anti') #records in B not in A 
+                     .filter(col("actie") != "deleted").select(business_key).drop(*uitzondering_kolom))
 
     # Identificeer opnieuw ingevulde records
-    condition_reinserted = col(business_key).isin(unieke_bk_set_veranderd) & (col("actie") == "deleted")
-    unieke_bk_set_reinserted = set(huidig_df.filter(condition_reinserted).select(business_key).distinct().rdd.flatMap(lambda x: x).collect())
-
+    df_opnieuw_ingevoerd = (huidig_df.filter(col("actie") == "deleted").drop(*uitzondering_kolom)
+            .join(nieuw_bk_df, business_key, 'inner') #records in B not in A 
+            .select(business_key).drop(*uitzondering_kolom))
+    
     # Identificeer ingevoegde records
-    condition_inserted = col(business_key).isin(unieke_bk_set_veranderd) & ~col(business_key).isin(huidige_set_bk)
-    unieke_bk_set_ingevuld = set(veranderde_df.filter(condition_inserted).select(business_key).distinct().rdd.flatMap(lambda x: x).collect())
+    df_ingevoegd = (df_veranderd.join(df_veranderd, business_key, "left_outer") #records in A not in B
+                    .join(huidige_bk_df, business_key, "left_anti") #records in B not in A 
+                    .select(business_key))
 
     # Filter de veranderde set door reinserted en ingevoegde records te verwijderen
-    unieke_bk_set_veranderd_filter = unieke_bk_set_veranderd - unieke_bk_set_reinserted - unieke_bk_set_ingevuld
-   
-    return unieke_bk_set_veranderd_filter, unieke_bk_set_verwijderd, unieke_bk_set_reinserted, unieke_bk_set_ingevuld
+    df_verandert_filter = df_veranderd.subtract(df_opnieuw_ingevoerd).subtract(df_ingevoegd)
+
+    return df_verandert_filter, df_verwijderd, df_opnieuw_ingevoerd, df_ingevoegd
 
 def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_catalog: str, naam_nieuw_df: str, huidig_dwh: str = None):
     """
@@ -199,8 +223,9 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_cat
         naam_nieuw_df (str): Naam van de tabel in het opgegeven schema.
         huidig_dwh (str, optioneel): Naam van het huidige DWH DataFrame. Indien niet opgegeven, wordt 
                                      de huidige tabelnaam van 'nieuw_df' gebruikt (komt overeen met het DWH).
-    Laatste update: xx-xx-2023
-    """     
+    Laatste update: 09-01-2023
+    """ 
+    
     # Lees de huidige versie van de opgegeven tabel in
     if huidig_dwh is None:
         huidig_dwh_tabel = spark.read.table(f"{schema_catalog}.{naam_nieuw_df}").cache()
@@ -211,102 +236,103 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_cat
     huidige_datum_tz = tijdzone_amsterdam() 
 
     # Bepaal de juiste volgorde van de kolommen
-    dwh_kolom_volgorde = huidig_dwh_tabel.columns
-    volgorde_kolommen = [business_key, "record_actief", "surrogaat_sleutel", "geldig_van", "geldig_tot", "actie"]
-    for column in dwh_kolom_volgorde:
-        if column not in volgorde_kolommen:
-            volgorde_kolommen.append(column)
-
+    volgorde_kolommen_gewenst = [business_key, "record_actief", "surrogaat_sleutel", "geldig_van", "geldig_tot", "actie"]
+    _, volgorde_kolommen = bepaal_kolom_volgorde(df = huidig_dwh_tabel, gewenste_kolom_volgorde = volgorde_kolommen_gewenst)
+            
     # Roep de functie bepaal_veranderde_records aan om de records te krijgen van rijen die veranderd zijn
-    unieke_lijst_id_verandert, unieke_lijst_id_verwijdert, unieke_lijst_id_opnieuw_ingevoegd, unieke_lijst_id_toegevoegd = bepaal_veranderde_records(huidig_dwh_tabel, nieuw_df, business_key)
+    unieke_df_id_verandert, unieke_df_id_verwijdert, unieke_df_id_opnieuw_ingevoegd, unieke_df_id_toegevoegd = bepaal_veranderde_records(huidig_dwh_tabel, nieuw_df, business_key)
 
-    # Voeg alle losse sets samen om te filteren over de id's
-    unieke_lijst_id_samengevoegd = unieke_lijst_id_verandert.union(unieke_lijst_id_verwijdert).union(unieke_lijst_id_opnieuw_ingevoegd).union(unieke_lijst_id_toegevoegd)
-
-    # Converteer de set van unieke id's naar een dataframe die je kunt broadcasten over verschillende workers
-    id_df = spark.createDataFrame([(id,) for id in unieke_lijst_id_samengevoegd], ["account_id"])
+    # Voeg alle losse dataframes samen om later te broadcasten
+    df_bk_samengevoegd_1 = (unieke_df_id_verwijdert.union(unieke_df_id_verandert))
+    df_bk_samengevoegd_2 = (unieke_df_id_verandert.union(unieke_df_id_opnieuw_ingevoegd).union(unieke_df_id_toegevoegd))
 
     # Dataframes opsplitsen in delen die wel aangepast moeten worden en ander deel niet.
     # Dit doen wij voor de efficiëntie en optimalisatie van de functie
     # Aangezien we met de id's filteren kan het contra-intuïtief zijn om bij geen_aanpassing een left_anti join te gebruiken
-    huidig_dwh_tabel_geen_aanpassing = (huidig_dwh_tabel.join(broadcast(id_df), "account_id", "left_anti").select(*volgorde_kolommen))
-    huidig_dwh_tabel_wel_aanpassing = (huidig_dwh_tabel.join(broadcast(id_df), "account_id").select(*volgorde_kolommen))
-    
+    huidig_dwh_tabel_geen_aanpassing = (huidig_dwh_tabel.join(broadcast(df_bk_samengevoegd_1), business_key, "left_anti").select(*volgorde_kolommen))
+    huidig_dwh_tabel_wel_aanpassing = (huidig_dwh_tabel.join(broadcast(df_bk_samengevoegd_1), business_key).select(*volgorde_kolommen))
+
+    # Maak een opsplitsing voor de verschillende stappen
+    huidig_dwh_verwijderd = (huidig_dwh_tabel_wel_aanpassing.join(unieke_df_id_verwijdert, business_key, "inner")
+                             .withColumn("actie", lit("deleted")))
+    huidig_dwh_verandert = (huidig_dwh_tabel_wel_aanpassing.join(unieke_df_id_verandert, business_key, "inner"))
+
+    # Voeg ze weer samen
+    huidig_dwh_tabel_wel_aanpassing = (huidig_dwh_verwijderd.union(huidig_dwh_verandert))
+
     # Pas de records in het DWH (huidige tabel) aan die veranderd zijn
     temp_huidig_dwh_tabel = (huidig_dwh_tabel_wel_aanpassing
                              .withColumn("nieuwe_geldig_tot", huidige_datum_tz)
                              .withColumn("record_actief_update", lit(False))
                              .drop("geldig_tot").withColumnRenamed("nieuwe_geldig_tot", "geldig_tot")
                              .drop("record_actief").withColumnRenamed("record_actief_update", "record_actief")
-                             .withColumn("actie", when(huidig_dwh_tabel_wel_aanpassing[business_key].isin(unieke_lijst_id_verwijdert), "deleted")
-                                         .otherwise(col("actie")))
-                             .select(*volgorde_kolommen)
-                             )
+                             .select(*volgorde_kolommen))
     
     # Voeg de 2 delen van het DWH weer samen
-    rejoined_huidig_dwh_tabel = huidig_dwh_tabel_geen_aanpassing.union(temp_huidig_dwh_tabel)
-                                          
+    rejoined_huidig_dwh_tabel = (huidig_dwh_tabel_geen_aanpassing
+                                 .union(temp_huidig_dwh_tabel).select(*volgorde_kolommen)
+                                 .repartition(10).cache())
+                       
     # Dataframes filteren op de id's die aangepast zijn en met de nieuwe gegevens weer toegevoegd worden aan de DWH 
     # 'Broadcast' van business_keys voor join speed_optimalisatie 
-    temp_nieuw_df_wel_aanpassing = nieuw_df.join(broadcast(id_df), "account_id") 
+    temp_nieuw_df_wel_aanpassing = nieuw_df.join(broadcast(df_bk_samengevoegd_2), "account_id") 
 
-    # Pas de surrogaat_sleutel, record_actief, geldig_van, geldig_tot, actie aan voor de records waar aanpasisngen gemeten zijn.
-    temp_verandert_df = (temp_nieuw_df_wel_aanpassing
-                         .withColumn("surrogaat_sleutel", lit(None))
-                         .withColumn("record_actief", lit(True))
-                         .withColumn("geldig_van", huidige_datum_tz)
-                         .withColumn("geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss"))
-                         .withColumn("actie", when(temp_nieuw_df_wel_aanpassing[business_key].isin(unieke_lijst_id_toegevoegd), "inserted")
-                                     .otherwise(when(temp_nieuw_df_wel_aanpassing[business_key].isin(unieke_lijst_id_opnieuw_ingevoegd), "reinserted")
-                                                        .otherwise(when(temp_nieuw_df_wel_aanpassing[business_key].isin(unieke_lijst_id_verandert), "changed")
-                                                                               .otherwise("ERROR!"))))
-                         .select(*volgorde_kolommen)
-                         )
+    # Maak voor iedere individuele actie een tabel en pas de actie kolom aan 
+    df_toegevoegd = (temp_nieuw_df_wel_aanpassing.join(unieke_df_id_toegevoegd, business_key, "inner").withColumn("actie", lit("inserted")))
+    df_opnieuw_ingevoegd = (temp_nieuw_df_wel_aanpassing.join(unieke_df_id_opnieuw_ingevoegd, business_key, "inner")
+                            .withColumn("actie", lit("reinserted")))
+    df_verandert = (temp_nieuw_df_wel_aanpassing.join(unieke_df_id_verandert, business_key, "inner").withColumn("actie", lit("changed")))
     
-    # Voeg nieuwe surrogaatsleutels toe
-    max_surrogaat_sleutel = rejoined_huidig_dwh_tabel.select(max(rejoined_huidig_dwh_tabel["surrogaat_sleutel"])).first()[0]
-    temp_verandert_df = voeg_aangepaste_surrogaatsleutel_toe(temp_verandert_df, max_surrogaat_sleutel)
-
+    # voeg dataframes weer samen en pas historiseringskolommen aan
+    df_nieuwe_tabel_samengevoegd = (df_toegevoegd.union(df_opnieuw_ingevoegd).union(df_verandert) 
+                                    .withColumn("surrogaat_sleutel", lit(None))
+                                    .withColumn("record_actief", lit(True))
+                                    .withColumn("geldig_van", huidige_datum_tz)
+                                    .withColumn("geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss"))
+                                    .withColumn("surrogaat_sleutel", genereer_willekeurige_hash(col(business_key)))
+                                    .select(*volgorde_kolommen) .repartition(10).cache())
+                                        
     # Sorteer beide dataframe op kolommen, zodat ze samengevoegd kunnen worden
-    gesorteerde_kolommen = sorted(rejoined_huidig_dwh_tabel.columns, key=lambda kol: kol.lower())
-    df1 = rejoined_huidig_dwh_tabel.select(*gesorteerde_kolommen)
-    df2 = temp_verandert_df.select(*gesorteerde_kolommen)
-    output = (df1.union(df2).select(*volgorde_kolommen).orderBy(business_key))
-    output.display()
-    
+    output = rejoined_huidig_dwh_tabel.union(df_nieuwe_tabel_samengevoegd).cache()
+
+    # Controleer of alle surrogaat_sleutels in de tabel uniek zijn
+    controle_unieke_bk(df=output, business_key=business_key)
+
     # Sla de gegevens op in delta-formaat in het opgegeven schema
     print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}")
-    output.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite')
+    output.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite') # is langzaam (single node)
     return
 
-def toepassen_historisering(nieuw_df, schema_catalog: str, business_key: str, naam_nieuw_df=None, huidig_dwh: str = None):
+def toepassen_historisering(bestaande_tabel, schema_catalog: str, business_key: str, naam_tabel=None, huidig_dwh: str = None):
     """
     Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en heeft hiermee de controle over de uitvoering van het historiseringsproces.
 
-    Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar een SQL temporary view of Python DataFrame. Wanneer jij bij nieuw_df een Python DataFrame opgeeft, moet je verplicht naam_nieuw_df invullen. Aangezien Python geen objectnaam kan afleiden van objecten.
+    Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar een SQL temporary view of Python DataFrame. Wanneer jij bij bestaande_tabel een Python DataFrame opgeeft, moet je verplicht naam_tabel invullen. Aangezien Python geen objectnaam kan afleiden van objecten.
+    
     Args:
-        nieuw_df (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view met gewijzigde gegeven of een Python DataFrame
-        schema_catalog (str): Naam van het schema waar de tabel instaat of opgeslagen moet worden.
+        bestaande_tabel (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view met gewijzigde gegeven of een Python DataFrame
+        schema_catalog (str): Naam van het schema en catalog waar de tabel instaat of opgeslagen moet worden. Bijvoorbeeld: "dpms.silver"
         business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
-        naam_nieuw_df (str, verplicht bij opgegeven Python DataFrames): Naam van DataFrame/Tabel zoals die opgeslagen is in het opgegeven schema/catalog
+        naam_tabel (str, verplicht bij opgegeven Python DataFrames): Naam van DataFrame/Tabel zoals die opgeslagen is in het opgegeven schema/catalog
         huidig_dwh (str, optioneel): Naam van het huidige DWH DataFrame. Indien niet opgegeven, wordt
                                      de huidige tabelnaam van 'nieuw_df' gebruikt (komt overeen met het DWH).
 
-    Laatste update: 04-12-2023
+    Laatste update: 09-01-2024
 
     Raises:
         ValueError: Als de tabel/dataframe-naam niet kan worden afgeleid vanuit het object. 
-                    Indien je bij nieuw_df een Python DataFrame meegeeft, moet je de naam van de tabel geven 
-                    zoals bij naam_nieuw_df.
-    """
+                    Indien je bij bestaande_tabel een Python DataFrame meegeeft, moet je de naam van de tabel geven 
+                    zoals bij naam_tabel.
+    """   
     # Bepaal of de input een SQL temporary view is of een PySpark dataframe.
-    if type(nieuw_df) == str:
-        naam_nieuw_df = nieuw_df.replace("_temp_view", "")
-        temp_nieuw_df = spark.table(nieuw_df).cache()
-    elif type(nieuw_df) != str and (naam_nieuw_df is not None and naam_nieuw_df != ""):
-        temp_nieuw_df = nieuw_df.cache()
+    if type(bestaande_tabel) == str:
+        naam_bestaande_tabel = bestaande_tabel.replace("_temp_view", "")
+        temp_bestaande_tabel = spark.table(naam_bestaande_tabel).cache()
+        
+    elif type(bestaande_tabel) != str and (naam_tabel is not None and naam_tabel != ""):
+        temp_bestaande_tabel = bestaande_tabel.cache()
     else:
-         raise ValueError("Python kan de tabel/dataframe-naam niet afleiden vanuit het object. Indien je bij nieuw_df een Python DataFrame meegeeft, moet je de naam van de tabel geven zoals bij naam_nieuw_df")
+         raise ValueError("Python kan de tabel/dataframe-naam niet afleiden vanuit het object. Indien je bij nieuw_df een Python DataFrame meegeeft, moet je de naam van de tabel geven zoals bij naam_tabel")
 
     # Haal metadata op uit de Unity Catalog
     tabellen_catalog = spark.sql(f"SHOW TABLES IN {schema_catalog}")
@@ -314,11 +340,12 @@ def toepassen_historisering(nieuw_df, schema_catalog: str, business_key: str, na
     # Maak een set van alle tabellen in het opgegeven schema
     set_tabellen_catalog = {row["tableName"] for row in tabellen_catalog.collect()}
 
-    # Controleer of de opgegeven tabel al bestaat in het opgegeven schema
-    if naam_nieuw_df in set_tabellen_catalog:
-        print(f"De tabel: {naam_nieuw_df} bevindt zich in de Unity Catalogus onder het volgende schema: {schema_catalog}")
-        updaten_historisering_dwh(nieuw_df=temp_nieuw_df, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_nieuw_df)
+    # Controleer of de opgegeven tabel al bestaat in het opgegeven schema#
+    if naam_tabel in set_tabellen_catalog:
+        print(f"De tabel: {naam_tabel} bevindt zich in de Unity Catalogus onder het volgende schema: {schema_catalog}")
+        updaten_historisering_dwh(nieuw_df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel)
     else:
-        print(f"Dit is de eerste keer dat je de tabel: {naam_nieuw_df} wilt historiseren. Historisering wordt nu toegepast...")
-        initialiseer_historisering(df=temp_nieuw_df, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_nieuw_df)
+        print(f"Dit is de eerste keer dat je de tabel: {naam_tabel} wilt historiseren. Historisering wordt nu toegepast...")
+        initialiseer_historisering(df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel)
     return "Historisering is toegepast!"
+
