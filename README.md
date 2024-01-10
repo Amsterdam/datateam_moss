@@ -23,7 +23,11 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 ## 2.3 Disclaimers
 >> **Deze repo zit in de Proof of Concept fase** 
 
-# 3. Overzicht
+# 3. Overzicht Functionaliteiten
+> 3.1 -> Historisering
+> 3.2 -> Algemene functie
+> 3.3 -> Reversed modeling voor logische modellen
+
 
 ## 3.1 Historisering
 In deze repo vind je functies voor het historiseren van tabellen. In het specifiek het toepassen van slowly changing dimensions type 2. 
@@ -70,8 +74,6 @@ def toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam
     """
     return
 ```
-
-
 
 
 De functie heeft de volgende functionaliteit:
