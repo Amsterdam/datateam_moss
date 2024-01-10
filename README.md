@@ -99,8 +99,8 @@ dpms.clean_columnames(cols)
 dataset = Dataset(
     catalog='catalog_name', # bijv. 'dpms_dev'
     database='schema_name', # bijv. 'silver'
-    project_prefixes=['amis'], 
-    exclude=['test']
+    project_prefixes=['prefix_'], # bijv. 'sport_'
+    exclude=['test'] 
 )
 
 dataset.print_eraser_code()

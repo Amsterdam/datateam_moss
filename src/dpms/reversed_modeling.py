@@ -1,30 +1,34 @@
 from itertools import combinations
 
+
 class Dataset:
     """
     Represents a dataset in a Databricks catalog.database.
 
     Usage:
         dataset = Dataset(
-            catalog='dpms_dev',
-            database='silver',
-            project_prefixes=['amis'],
-            exclude=['test']
+            catalog='catalog_name', # bijv. 'dpms_dev'
+            database='schema_name', # bijv. 'silver'
+            project_prefixes=['prefix_'], # bijv. 'sport_'
+            exclude=['test'] 
         )
         dataset.print_eraser_code()
+        dataset.print_drawio_code()
 
     Args:
+        spark_session (SparkSession): The SparkSession to use, which is already loaded into each databricks notebooks as 'spark'.
         catalog (str): The name of the catalog.
         database (str): The name of the database.
         project_prefix (list, optional): A list of project prefixes to filter tables. Defaults to [].
         exclude (list, optional): A list of table names to exclude. Defaults to [].
     """
 
-    def __init__(self, catalog: str, database: str, project_prefixes: list = [], exclude: list = []):
+    def __init__(self, spark_session,catalog: str, database: str, project_prefixes: list = [], exclude: list = []):
+        self.spark = spark_session
         self.catalog = catalog
         self.database = database
-        spark.catalog.setCurrentCatalog(catalog)
-        spark.catalog.setCurrentDatabase(database)
+        self.spark.catalog.setCurrentCatalog(catalog)
+        self.spark.catalog.setCurrentDatabase(database)
         self.project_prefixes = project_prefixes
         self.exclude = exclude
         self.tables = self.get_tables()
@@ -40,7 +44,7 @@ class Dataset:
         Returns:
             list: A list of tables in the dataset.
         """
-        tables = spark.catalog.listTables()
+        tables = self.spark.catalog.listTables()
         if self.project_prefixes == [] or not self.project_prefixes:
             return tables
         else:
@@ -53,7 +57,7 @@ class Dataset:
         Returns:
             dict: A dictionary of table names and their corresponding schemas.
         """
-        return {t.name: spark.table(t.name).schema for t in self.tables}
+        return {t.name: self.spark.table(t.name).schema for t in self.tables}
 
     def get_column_occurrences(self):
         """
@@ -64,7 +68,7 @@ class Dataset:
         """
         occurrences = {}
         for table in self.tables:
-            for c in spark.table(table.name).schema:
+            for c in self.spark.table(table.name).schema:
                 occurrences.setdefault(c.name, []).append(table.name)
         return occurrences
     
@@ -79,8 +83,8 @@ class Dataset:
         for c, tables in self.occurrences.items():
             if len(tables) > 1:
                 for table1, table2 in combinations(tables, 2):
-                    df1 = spark.table(table1).select(c)
-                    df2 = spark.table(table2).select(c)
+                    df1 = self.spark.table(table1).select(c)
+                    df2 = self.spark.table(table2).select(c)
 
                     if df1.distinct().count() == df1.count() and df2.distinct().count() == df2.count():
                         relation_type = '-'
