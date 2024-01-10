@@ -102,10 +102,11 @@ De functie heeft de volgende functionaliteit:
 Verder controleert deze functies of de opgegeven business_key uniek is in de aangeleverde tabel. Als er dubbele business keys inzitten kan er niet bepaald worden wat er met de record moet gebeuren.
 
 ## 3.2 Algemene functies
-Op dit moment is er 1 functie beschikbaar. Deze functies schoont kolomnamen op:
+Op dit moment zijn er 2 functies beschikbaar. Deze functies schoont kolomnamen op:
 
 ```python
-dpms.clean_columnames(cols)
+clean_colum_names(df.columns)
+rename_multiple_columns(df, {'oude_naam': 'nieuwe_naam', 'oude_naam_2': 'nieuwe_naam_2'})
 ```      
 
 ## 3.3 Reversed modeling voor logische modellen
