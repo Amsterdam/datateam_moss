@@ -59,9 +59,11 @@ Voor het gebruik van de historisering functies volg het volgende stappenplan:
 import dpms
 
 # Nu kan je de verschillende functies aanroepen. De regisseursfunctie voor historisering is toepassen_historisering().
-# Dit doe je als volgt:
-dpms.toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam_nieuw_df=None, huidig_dwh: str = None):
-
+# Dit doe je, bijvoorbeeld, als volgt:
+dpms.toepassen_historisering(bestaande_tabel=pyspark_df, 
+                              schema_catalog="dpms_dev.silver",
+                              business_key="account_id",
+                              naam_tabel="test_dwh_historisering")
 
 # Hieronder nog de documentatie van regisseursfunctie. Je zou dit zelf ook kunnen opzoeken in de /src-map.
  """
