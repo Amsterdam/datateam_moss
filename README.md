@@ -74,11 +74,13 @@ dpms.toepassen_historisering(bestaande_tabel=pyspark_df,
     Aangezien Python geen objectnaam kan afleiden van objecten.
     
     Args:
-        bestaande_tabel (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view met gewijzigde gegeven of een Python DataFrame
+        bestaande_tabel (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view
+                                             met gewijzigde gegeven of een Python DataFrame
         schema_catalog (str): Naam van het schema en catalog waar de tabel instaat of opgeslagen moet worden. 
                                 Bijvoorbeeld: {catalog.schema} = "dpms_dev.silver"
         business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
-        naam_tabel (str, verplicht bij opgegeven Python DataFrames): Naam van DataFrame/Tabel zoals die opgeslagen is in het opgegeven schema/catalog
+        naam_tabel (str, verplicht bij opgegeven Python DF): Naam van DataFrame/Tabel zoals
+                                                              die opgeslagen is in het opgegeven schema/catalog
         huidig_dwh (str, optioneel): Naam van het huidige DWH DataFrame. Indien niet opgegeven, wordt
                                      de huidige tabelnaam van 'nieuw_df' gebruikt (komt overeen met het DWH).
 
