@@ -37,7 +37,6 @@ De code voor het historiseren (Slowly Changing Dimensions Type 2) is (zover moge
 >> **Deze repo zit in de Proof of Concept fase**
 
 # 3. Overzicht Functionaliteiten
-[click on this link](#3.1-Historisering)
 - 3.1 -> Historisering
 - 3.2 -> Algemene functie
 - 3.3 -> Reversed modeling voor logische modellen
