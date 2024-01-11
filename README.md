@@ -49,7 +49,8 @@ Voor het gebruik van de historisering functies volg het volgende stappenplan:
 #### Let op! ####
 # Het beste is om de package de installeren op jouw cluster.
 # De MOSS Package staat op PyPi dus wanneer je dit op jouw cluster wilt installeren,
-# kies het PyPi-menu voor het installeren van de package. Elke keer als het cluster opnieuw opstart wordt de recenste versie ingeladen.
+# kies het PyPi-menu voor het installeren van de package.
+# Elke keer als het cluster opnieuw opstart wordt de recenste versie ingeladen.
 
 # Wil je het handmatig in jouw databricks sessie installeren gebruik dan de code hieronder. Voer dit uit in een databricks cel 
 !pip install datateam-moss
