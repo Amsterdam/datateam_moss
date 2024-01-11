@@ -1,5 +1,10 @@
 import re
-
+from databricks.sdk.runtime import *
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+from datetime import datetime
+from pyspark.sql import SparkSession, Row, DataFrame
+from pyspark.sql.window import Window
 
 def clean_column_names(cols):
     """
@@ -29,7 +34,7 @@ def clean_column_names(cols):
     return cleaned_cols
 
 
-def rename_multiple_columns(df: pyspark.sql.DataFrame, renamings: dict):
+def rename_multiple_columns(df: DataFrame, renamings: dict):
     """
     Renames multiple columns in a PySpark DataFrame.
 
