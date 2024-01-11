@@ -33,60 +33,65 @@ De code voor het historiseren (Slowly Changing Dimensions Type 2) is (zover moge
 | ---- | ---- | ---- |
 | Het opslaan van de losse partities kost op dit moment, relatief te meeste tijd | updaten_historisering_dwh | output.write.saveAsTable() | 
 
+## 2.4 Disclaimers
+>> **Deze repo zit in de Proof of Concept fase**
+
 # 3. Overzicht Functionaliteiten
 - 3.1 -> Historisering
 - 3.2 -> Algemene functie
 - 3.3 -> Reversed modeling voor logische modellen
-
-## 2.4 Disclaimers
->> **Deze repo zit in de Proof of Concept fase**
-
-
-# 3. Overzicht
+  
 ## 3.1 Historisering
 In deze repo vind je functies voor het historiseren van tabellen. In het specifiek het toepassen van slowly changing dimensions type 2. 
 Voor het gebruik van de historisering functies volg het volgende stappenplan:
 
 ```python
-# Voer dit uit in een databricks cel
-!pip install datateam-moss
-
 #### Let op! ####
 # Het beste is om de package de installeren op jouw cluster.
 # De MOSS Package staat op PyPi dus wanneer je dit op jouw cluster wilt installeren,
 # kies het PyPi-menu voor het installeren van de package.
+# Elke keer als het cluster opnieuw opstart wordt de recenste versie ingeladen.
+
+# Wil je het handmatig in jouw databricks sessie installeren gebruik dan de code hieronder. Voer dit uit in een databricks cel 
+!pip install datateam-moss
 #### Let op! ####
 
 # Wanneer jij de package geïnstalleerd hebt, moet je de package nog inladen.
 import dpms
 
 # Nu kan je de verschillende functies aanroepen. De regisseursfunctie voor historisering is toepassen_historisering().
-# Dit doe je als volgt:
-dpms.toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam_nieuw_df=None, huidig_dwh: str = None):
-
+# Dit doe je, bijvoorbeeld, als volgt:
+dpms.toepassen_historisering(bestaande_tabel=pyspark_df, 
+                              schema_catalog="dpms_dev.silver",
+                              business_key="account_id",
+                              naam_tabel="test_dwh_historisering")
 
 # Hieronder nog de documentatie van regisseursfunctie. Je zou dit zelf ook kunnen opzoeken in de /src-map.
-def toepassen_historisering(nieuw_df, schema_catalog: str, rij_id_var: str, naam_nieuw_df=None, huidig_dwh: str = None):
-    """
-    Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en
-    heeft hiermee de controle over de uitvoering van het historiseringsproces.
+ """
+    Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en heeft hiermee de controle over de uitvoering van het historiseringsproces.
 
     Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar een SQL temporary view of Python DataFrame.
-    Wanneer jij bij nieuw_df een Python DataFrame opgeeft, moet je verplicht naam_nieuw_df invullen.
+    Wanneer jij bij bestaande_tabel een Python DataFrame opgeeft, moet je verplicht naam_tabel invullen.
     Aangezien Python geen objectnaam kan afleiden van objecten.
+    
     Args:
-        nieuw_df (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view met gewijzigde gegeven of een Python DataFrame
-        schema_catalog (str): Naam van het schema waar de tabel instaat of opgeslagen moet worden.
-        rij_id_var (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
-        naam_nieuw_df (str, verplicht bij opgegeven Python DataFrames): Naam van DataFrame/Tabel zoals die opgeslagen is in het opgegeven schema/catalog
+        bestaande_tabel (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view
+                                             met gewijzigde gegeven of een Python DataFrame
+        schema_catalog (str): Naam van het schema en catalog waar de tabel instaat of opgeslagen moet worden. 
+                                Bijvoorbeeld: {catalog.schema} = "dpms_dev.silver"
+        business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
+        naam_tabel (str, verplicht bij opgegeven Python DF): Naam van DataFrame/Tabel zoals
+                                                              die opgeslagen is in het opgegeven schema/catalog
         huidig_dwh (str, optioneel): Naam van het huidige DWH DataFrame. Indien niet opgegeven, wordt
                                      de huidige tabelnaam van 'nieuw_df' gebruikt (komt overeen met het DWH).
+
+    Laatste update: 09-01-2024
+
     Raises:
         ValueError: Als de tabel/dataframe-naam niet kan worden afgeleid vanuit het object. 
-                    Indien je bij nieuw_df een Python DataFrame meegeeft, moet je de naam van de tabel geven 
-                    zoals bij naam_nieuw_df.
-    """
-    return
+                    Indien je bij bestaande_tabel een Python DataFrame meegeeft, moet je de naam van de tabel geven 
+                    zoals bij naam_tabel.
+    """   
 ```
 
 
@@ -102,11 +107,11 @@ De functie heeft de volgende functionaliteit:
 Verder controleert deze functies of de opgegeven business_key uniek is in de aangeleverde tabel. Als er dubbele business keys inzitten kan er niet bepaald worden wat er met de record moet gebeuren.
 
 ## 3.2 Algemene functies
-Op dit moment zijn er 2 functies beschikbaar. Deze functies schoont kolomnamen op:
+Op dit moment zijn er 2 functies beschikbaar:
 
 ```python
-clean_colum_names(df.columns)
-rename_multiple_columns(df, {'oude_naam': 'nieuwe_naam', 'oude_naam_2': 'nieuwe_naam_2'})
+clean_colum_names(df.columns) # deze functies schoont kolomnamen op
+rename_multiple_columns(df, {'oude_naam': 'nieuwe_naam', 'oude_naam_2': 'nieuwe_naam_2'}) # deze hernoemt meerdere kolommen
 ```      
 
 ## 3.3 Reversed modeling voor logische modellen
