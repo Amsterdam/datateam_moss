@@ -1,58 +1,60 @@
 # Inladen packages
-from databricks.sdk.runtime import *
 import sys
+import time
+import uuid
+import hashlib
+import random
+import string
+
+from databricks.sdk.runtime import *
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import SparkSession, Row, DataFrame
 from pyspark.sql.window import Window
-import time
 
-def voeg_aangepaste_surrogaatsleutel_toe(df: DataFrame, max_bestaande_surrogaatsleutel=None):
+def voeg_willekeurig_toe_en_hash_toe(df, business_key):
     """
-    Voeg een aangepaste surrogaatsleutelkolom toe aan een PySpark DataFrame.
-
-    Args:
-        df (DataFrame): Het oorspronkelijke DataFrame waarop de surrogaatsleutel moet worden toegevoegd.
-        max_bestaande_surrogaatsleutel (int, optioneel): De maximale bestaande surrogaatsleutel in het DataFrame.
-            Als niet opgegeven, wordt de surrogaatsleutel gestart vanaf 1.
-
-    Returns:
-        DataFrame: Een DataFrame met de aangepaste surrogaatsleutelkolom toegevoegd.
-
-    Voorbeeld:
-        # Gebruik van de functie om een surrogaatsleutel toe te voegen aan een DataFrame
-        df = voeg_aangepaste_surrogaatsleutel_toe(df)
-    Laatste update: 23-11-2023
-    """
-    # Creëer een window-specificatie om te sorteren op een constante waarde (0)
-    window_spec = Window().orderBy(lit(0))
-
-    # Gebruik row_number() om een unieke waarde te genereren voor elke rij, beginnend vanaf max_bestaande_surrogaatsleutel + 1
-    df = df.withColumn("surrogaat_sleutel", row_number().over(window_spec) + (max_bestaande_surrogaatsleutel or 0))
-    return df
-
-def genereer_willekeurige_hash(bk_col):
-    """
-    Genereert een willekeurige hash-waarde op basis van de ingevoerde kolom.
+    Neemt de naam van een kolom als invoer aan, veronderstelt dat het een gehashte waarde bevat,
+    voegt aan elke waarde een willekeurig woord of getal toe en maakt een nieuwe hash.
 
     Parameters:
-    - bk_col: Column: De kolom waarop de hash-waarde wordt gegenereerd.
+    - business_key: str: De naam van de invoerkolom.
 
     Returns:
-    - Column: De gegenereerde hash-waarde in hexadecimale representatie.
-    
-    Laatste update: 10-01-2023
+    - DataFrame: Een DataFrame met de oorspronkelijke gehashte waarde en de nieuwe gehashte waarde.
     """
 
-    # Concateneer de invoerkolom met een willekeurige waarde voor extra willekeurigheid
-    geconcateneerde_kolom = (bk_col.cast("string") + rand()).cast("string")
+    def voeg_willekeurig_toe_en_hash_toe_udf(waarde):
+        """
+        Neemt een waarde, voegt er een willekeurig woord of getal aan toe en maakt een nieuwe hash.
 
-    # Gebruik het SHA-1 hash-algoritme
-    gehashte_kolom = sha1(geconcateneerde_kolom)
+        Parameters:
+        - waarde: De invoerwaarde.
 
-    # Geef de hexadecimale representatie van de hash terug
-    return gehashte_kolom.cast("string")
+        Returns:
+        - str: De nieuwe gehashte waarde.
+        """
+        willekeurig_deel = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+
+        # Controleer het type van de invoerwaarde en handel elk geval dienovereenkomstig af
+        if isinstance(waarde, int):
+            waarde_str = str(waarde)
+        elif isinstance(waarde, bool):
+            waarde_str = str(waarde)
+        else:
+            waarde_str = waarde
+
+        geconcateneerde_reeks = waarde_str + willekeurig_deel
+        nieuwe_hash_waarde = hashlib.sha1(geconcateneerde_reeks.encode()).hexdigest()
+        return nieuwe_hash_waarde
+
+    # Registreer de UDF
+    udf_voeg_willekeurig_toe_en_hash_toe = udf(voeg_willekeurig_toe_en_hash_toe_udf, returnType=StringType())
+
+    # Pas de UDF toe op het DataFrame
+    resultaat_df = df.withColumn("surrogaat_sleutel", udf_voeg_willekeurig_toe_en_hash_toe(col(business_key)))
+    return resultaat_df
 
 def controle_unieke_bk(df, business_key):
     """
@@ -103,47 +105,6 @@ def tijdzone_amsterdam():
 
     return huidige_datum_tz
 
-def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key: str, naam_nieuw_df: str):
-    """
-    Bereid gegevens voor op historisering door historische data te markeren met relevante metadata.
-
-    Parameters:
-        - df (DataFrame): Het huidige DataFrame.
-        - schema_catalog (str): Naam van het schema waar de tabel moet worden opgeslagen.
-        - business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
-        - naam_nieuw_df (str): Naam van het nieuwe DataFrame in de catalogus.
-
-    Laatste update: 10-01-2023
-    """
-    # Controleer of het nieuwe DataFrame de vereiste kolommen bevat
-    vereiste_kolommen = ['geldig_van', 'geldig_tot', 'surrogaat_sleutel', 'record_actief', 'actie']
-    ontbrekende_kolommen = [kolom for kolom in vereiste_kolommen if kolom not in df.columns]
-    
-    if ontbrekende_kolommen:      
-        # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
-        huidige_datum_tz = tijdzone_amsterdam()
-
-        # Werk de einddatum, record_actief en begindatum kolommen bij in het huidige DataFrame
-        print(f"Ontbrekende kolommen: {', '.join(ontbrekende_kolommen)}. Deze worden aan het DataFrame toegevoegd...")
-        temp_df = (df.withColumn("geldig_van", huidige_datum_tz) 
-                    .withColumn("geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss")) 
-                    .withColumn("record_actief", lit(True)) 
-                    .withColumn("actie", lit("inserted"))
-                    .withColumn("surrogaat_sleutel", genereer_willekeurige_hash(col(business_key)))) 
-
-        # Controleer of de opgegeven identifier uniek is
-        controle_unieke_bk(df=temp_df, business_key=business_key)
-       
-        # Bepaal de juiste volgorde van de kolommen
-        volgorde_kolommen = [business_key, "record_actief", "surrogaat_sleutel", "geldig_van", "geldig_tot", "actie"]
-        output_volgorde, _ = bepaal_kolom_volgorde(df = temp_df, gewenste_kolom_volgorde = volgorde_kolommen)
-        output_volgorde_cached = output_volgorde.cache()
-        
-        # Sla de gegevens op in delta-formaat in het opgegeven schema
-        print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}...")
-        output_volgorde.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite')
-        return
-    
 def bepaal_kolom_volgorde(df: DataFrame, gewenste_kolom_volgorde: list) -> DataFrame: 
     """
     Bepaalt de volgorde van kolommen in een DataFrame op basis van de opgegeven gewenste volgorde.
@@ -213,6 +174,48 @@ def bepaal_veranderde_records(huidig_df: DataFrame, nieuw_df: DataFrame, busines
 
     return df_verandert_filter, df_verwijderd, df_opnieuw_ingevoerd, df_ingevoegd
 
+def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key: str, naam_nieuw_df: str):
+    """
+    Bereid gegevens voor op historisering door historische data te markeren met relevante metadata.
+
+    Parameters:
+        - df (DataFrame): Het huidige DataFrame.
+        - schema_catalog (str): Naam van het schema waar de tabel moet worden opgeslagen.
+        - business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
+        - naam_nieuw_df (str): Naam van het nieuwe DataFrame in de catalogus.
+
+    Laatste update: 10-01-2023
+    """
+    # Controleer of het nieuwe DataFrame de vereiste kolommen bevat
+    vereiste_kolommen = ['geldig_van', 'geldig_tot', 'surrogaat_sleutel', 'record_actief', 'actie']
+    ontbrekende_kolommen = [kolom for kolom in vereiste_kolommen if kolom not in df.columns]
+    
+    if ontbrekende_kolommen:      
+        # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
+        huidige_datum_tz = tijdzone_amsterdam()
+
+        # Werk de einddatum, record_actief en begindatum kolommen bij in het huidige DataFrame
+        print(f"Ontbrekende kolommen: {', '.join(ontbrekende_kolommen)}. Deze worden aan het DataFrame toegevoegd...")
+        is_valid_uuid_udf = udf(lambda x: is_valid_uuid(str(x)) if x is not None else False, BooleanType())
+        temp_df = (df.withColumn("geldig_van", huidige_datum_tz) 
+            .withColumn("geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss")) 
+            .withColumn("record_actief", lit(True)) 
+            .withColumn("actie", lit("inserted")))
+        temp_df = voeg_willekeurig_toe_en_hash_toe(df=temp_df, business_key=business_key)
+
+        # Controleer of de opgegeven identifier uniek is
+        controle_unieke_bk(df=temp_df, business_key=business_key)
+       
+        # Bepaal de juiste volgorde van de kolommen
+        volgorde_kolommen = [business_key, "record_actief", "surrogaat_sleutel", "geldig_van", "geldig_tot", "actie"]
+        output_volgorde, _ = bepaal_kolom_volgorde(df = temp_df, gewenste_kolom_volgorde = volgorde_kolommen)
+        output_volgorde_cached = output_volgorde.cache()
+        
+        # Sla de gegevens op in delta-formaat in het opgegeven schema
+        print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}.")
+        output_volgorde_cached.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite')
+        return
+    
 def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_catalog: str, naam_nieuw_df: str, huidig_dwh: str = None):
     """
     Voegt historische gegevens toe aan een PySpark DataFrame om wijzigingen bij te houden.
@@ -289,11 +292,11 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_cat
                                     .withColumn("record_actief", lit(True))
                                     .withColumn("geldig_van", huidige_datum_tz)
                                     .withColumn("geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss"))
-                                    .withColumn("surrogaat_sleutel", genereer_willekeurige_hash(col(business_key)))
                                     .select(*volgorde_kolommen) .repartition(10).cache())
-                                        
+    df_nieuwe_tabel_samengevoegd_ss = voeg_willekeurig_toe_en_hash_toe(df=df_nieuwe_tabel_samengevoegd, business_key=business_key)
+
     # Sorteer beide dataframe op kolommen, zodat ze samengevoegd kunnen worden
-    output = rejoined_huidig_dwh_tabel.union(df_nieuwe_tabel_samengevoegd).cache()
+    output = rejoined_huidig_dwh_tabel.union(df_nieuwe_tabel_samengevoegd_ss).cache()
 
     # Controleer of alle surrogaat_sleutels in de tabel uniek zijn
     controle_unieke_bk(df=output, business_key=business_key)
@@ -311,7 +314,8 @@ def toepassen_historisering(bestaande_tabel, schema_catalog: str, business_key: 
     
     Args:
         bestaande_tabel (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view met gewijzigde gegeven of een Python DataFrame
-        schema_catalog (str): Naam van het schema en catalog waar de tabel instaat of opgeslagen moet worden. Bijvoorbeeld: "dpms.silver"
+        schema_catalog (str): Naam van het schema en catalog waar de tabel instaat of opgeslagen moet worden. 
+                                Bijvoorbeeld: {catalog.schema} = "dpms_dev.silver"
         business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
         naam_tabel (str, verplicht bij opgegeven Python DataFrames): Naam van DataFrame/Tabel zoals die opgeslagen is in het opgegeven schema/catalog
         huidig_dwh (str, optioneel): Naam van het huidige DWH DataFrame. Indien niet opgegeven, wordt
@@ -340,7 +344,7 @@ def toepassen_historisering(bestaande_tabel, schema_catalog: str, business_key: 
     # Maak een set van alle tabellen in het opgegeven schema
     set_tabellen_catalog = {row["tableName"] for row in tabellen_catalog.collect()}
 
-    # Controleer of de opgegeven tabel al bestaat in het opgegeven schema#
+    # Controleer of de opgegeven tabel al bestaat in het opgegeven schema
     if naam_tabel in set_tabellen_catalog:
         print(f"De tabel: {naam_tabel} bevindt zich in de Unity Catalogus onder het volgende schema: {schema_catalog}")
         updaten_historisering_dwh(nieuw_df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel)
@@ -348,4 +352,3 @@ def toepassen_historisering(bestaande_tabel, schema_catalog: str, business_key: 
         print(f"Dit is de eerste keer dat je de tabel: {naam_tabel} wilt historiseren. Historisering wordt nu toegepast...")
         initialiseer_historisering(df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel)
     return "Historisering is toegepast!"
-
