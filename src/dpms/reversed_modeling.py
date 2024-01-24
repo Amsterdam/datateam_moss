@@ -1,7 +1,7 @@
 from itertools import combinations
 
 
-class Dataset:
+class Datasets:
     """
     Represents a dataset in a Databricks catalog.database.
 
@@ -23,7 +23,7 @@ class Dataset:
         exclude (list, optional): A list of table names to exclude. Defaults to [].
     """
 
-    def __init__(self, spark_session,catalog: str, database: str, project_prefixes: list = [], exclude: list = []):
+    def __init__(self, spark_session, catalog: str, database: str, project_prefixes: list = [], exclude: list = []):
         self.spark = spark_session
         self.catalog = catalog
         self.database = database
@@ -44,11 +44,12 @@ class Dataset:
         Returns:
             list: A list of tables in the dataset.
         """
-        tables = self.spark.catalog.listTables()
+        table_df = (spark.sql(f"SHOW TABLES").select("tableName").collect())
+        tables = [row["tableName"] for row in table_df]
         if self.project_prefixes == [] or not self.project_prefixes:
             return tables
         else:
-            return [t for t in tables if any(s in t.name for s in self.project_prefixes) and not t.name in self.exclude]
+            return [t for t in tables if any(s in t for s in self.project_prefixes) and not t in self.exclude]
     
     def get_tables_dict(self):
         """
@@ -57,7 +58,7 @@ class Dataset:
         Returns:
             dict: A dictionary of table names and their corresponding schemas.
         """
-        return {t.name: self.spark.table(t.name).schema for t in self.tables}
+        return {t: self.spark.table(t).schema for t in self.tables}
 
     def get_column_occurrences(self):
         """
@@ -68,8 +69,8 @@ class Dataset:
         """
         occurrences = {}
         for table in self.tables:
-            for c in self.spark.table(table.name).schema:
-                occurrences.setdefault(c.name, []).append(table.name)
+            for c in self.spark.table(table).schema:
+                occurrences.setdefault(c.name, []).append(table)
         return occurrences
     
     def get_relations(self):
@@ -122,4 +123,3 @@ class Dataset:
             for c in schema:
                 print(c.name)
             print()
-
