@@ -1,7 +1,7 @@
 from itertools import combinations
 
 
-class Datasets:
+class Dataset:
     """
     Represents a dataset in a Databricks catalog.database.
 
