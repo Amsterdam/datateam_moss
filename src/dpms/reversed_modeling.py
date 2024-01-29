@@ -27,8 +27,8 @@ class Dataset:
         self.spark = spark_session
         self.catalog = catalog
         self.database = database
-        self.spark.sql(f"USE {catalog}") # dit werkt in persoonlijke en shared clusters 
-        self.spark.sql(f"USE {database}") # dit werkt in persoonlijke en shared clusters
+        self.spark.sql(f"USE catalog {catalog}") # dit werkt in persoonlijke en shared clusters 
+        self.spark.sql(f"USE schema {database}") # dit werkt in persoonlijke en shared clusters
         self.project_prefixes = project_prefixes
         self.exclude = exclude
         self.tables = self.get_tables()
