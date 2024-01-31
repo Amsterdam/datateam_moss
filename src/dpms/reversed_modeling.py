@@ -1,5 +1,7 @@
+# Databricks notebook source
 from itertools import combinations
 from databricks.sdk.runtime import *
+import pandas as pd
 
 class Dataset:
     """
@@ -122,4 +124,38 @@ class Dataset:
             print('CREATE TABLE', table_name)
             for c in schema:
                 print(c.name)
+            print()
+
+
+    def get_table_stats(self, table_name):
+        """
+        Retrieves the table statistics for a given table.
+
+        Args:
+            table_name (str): The name of the table.
+
+        Returns:
+            pandas.DataFrame: The table statistics.
+        """
+        # return self.spark.table(table_name).toPandas().describe()
+        df = self.spark.table(table_name).toPandas()
+        return pd.concat([
+            df.nunique().rename('count_distinct'),
+            (df.nunique() / len(df)).rename('pct_distinct'),
+            df.isnull().mean().rename('pct_null')
+        ], axis=1)
+
+
+    def print_stats(self, table_name=None):
+        """
+        Prints out the table statistics for all tables in the dataset or one provided.
+        """
+        if table_name == None:
+            for table_name in self.tables:
+                print(table_name)
+                print(self.get_table_stats(table_name).to_markdown())
+                print()
+        else:
+            print(table_name)
+            print(self.get_table_stats(table_name).to_markdown())
             print()
