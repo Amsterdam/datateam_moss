@@ -1,6 +1,7 @@
 # Databricks notebook source
 from itertools import combinations
 from databricks.sdk.runtime import *
+import pandas as pd
 
 class Dataset:
     """
