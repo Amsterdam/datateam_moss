@@ -197,11 +197,11 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
     # Controleer of de opgegeven identifier uniek is
     controle_unieke_waarden_kolom(df=df, kolom=business_key)
     
-    # Als het een dimensietable betreft een record aanmaken voor missende waarden
-    if "_d_" in naam_nieuw_df:
-        c
-         Create a new list of lists with concatenated strings
-new_data = [[f"{col} heeft geen waarde" for col in columns]]
+#     # Als het een dimensietable betreft een record aanmaken voor missende waarden
+#     if "_d_" in naam_nieuw_df:
+#         c
+#          Create a new list of lists with concatenated strings
+#         new_data = [[f"{col} heeft geen waarde" for col in columns]]
 
     if ontbrekende_kolommen:      
         # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
