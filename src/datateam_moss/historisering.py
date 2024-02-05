@@ -3,6 +3,7 @@ import sys
 import time
 import uuid
 import hashlib
+import xxhash
 import random
 import string
 
@@ -13,18 +14,19 @@ from datetime import datetime
 from pyspark.sql import SparkSession, Row, DataFrame
 from pyspark.sql.window import Window
 
-def voeg_willekeurig_toe_en_hash_toe(df, business_key):
+def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, pk: str):
     """
     Neemt de naam van een kolom als invoer aan, veronderstelt dat het een gehashte waarde bevat,
     voegt aan elke waarde een willekeurig woord of getal toe en maakt een nieuwe hash.
 
     Parameters:
+    - df: DataFrame: Het DataFrame waar je de hash aan wil toevoegen
     - business_key: str: De naam van de invoerkolom.
+    - pk: str: De naam van de primary key
 
     Returns:
     - DataFrame: Een DataFrame met de oorspronkelijke gehashte waarde en de nieuwe gehashte waarde.
     """
-
     def voeg_willekeurig_toe_en_hash_toe_udf(waarde):
         """
         Neemt een waarde, voegt er een willekeurig woord of getal aan toe en maakt een nieuwe hash.
@@ -33,7 +35,7 @@ def voeg_willekeurig_toe_en_hash_toe(df, business_key):
         - waarde: De invoerwaarde.
 
         Returns:
-        - str: De nieuwe gehashte waarde.
+        - int: De nieuwe gehashte waarde als integer.
         """
         willekeurig_deel = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
 
@@ -43,26 +45,26 @@ def voeg_willekeurig_toe_en_hash_toe(df, business_key):
         elif isinstance(waarde, bool):
             waarde_str = str(waarde)
         else:
-            waarde_str = waarde
+            waarde_str = str(waarde)
 
         geconcateneerde_reeks = waarde_str + willekeurig_deel
-        nieuwe_hash_waarde = hashlib.sha1(geconcateneerde_reeks.encode()).hexdigest()
+        nieuwe_hash_waarde = xxhash.xxh64(geconcateneerde_reeks).intdigest()
         return nieuwe_hash_waarde
 
     # Registreer de UDF
     udf_voeg_willekeurig_toe_en_hash_toe = udf(voeg_willekeurig_toe_en_hash_toe_udf, returnType=StringType())
-
+    
     # Pas de UDF toe op het DataFrame
-    resultaat_df = df.withColumn("surrogaat_sleutel", udf_voeg_willekeurig_toe_en_hash_toe(col(business_key)))
+    resultaat_df = df.withColumn(pk, udf_voeg_willekeurig_toe_en_hash_toe(col(business_key)))
     return resultaat_df
 
-def controle_unieke_bk(df, business_key):
+def controle_unieke_waarden_kolom(df: DataFrame, kolom: str):
     """
     Controleert of alle waarden in een specifieke kolom uniek zijn in het gegeven DataFrame.
 
     Parameters:
     - df: DataFrame: Het DataFrame waarin de controle wordt uitgevoerd.
-    - business_key: str: De naam van de kolom waarvan de unieke waarden worden gecontroleerd.
+    - kolom: str: De naam van de kolom waarvan de unieke waarden worden gecontroleerd.
 
     Returns:
     - None
@@ -73,20 +75,19 @@ def controle_unieke_bk(df, business_key):
     
     Laatste update: 10-01-2023
     """
-
-    # Gebruik van het Window-functie om het aantal voorkomens van elke waarde te tellen
-    window_spec = Window().partitionBy(business_key)
-    df_bk_active_record = (df.filter(col("record_actief") == True).select([business_key, "record_actief"]).distinct())
-    df_with_counts = (df.join(broadcast(df_bk_active_record), [business_key, "record_actief"], "inner")
-                        .select(business_key)
-                        .withColumn("count", count(business_key).over(window_spec))
-                        .filter(col("count") >= 2))   
+    window_spec = Window().partitionBy(kolom)
+    df_with_counts = (
+        df.join(broadcast(df.dropDuplicates([kolom])), kolom, "inner")
+        .select(kolom, count(kolom).over(window_spec).alias("count"))
+        .filter(col("count") > 1)
+        .distinct()
+    )
     
     # If-statement om te controleren of er dubbele business_keys zijn
-    if (df_with_counts is None):
-        raise ValueError(f"Niet alle waarden in de kolom '{business_key}' zijn uniek.")
+    if (df_with_counts.isEmpty()):
+        print(f"Er zijn geen dubbele waarden gedetecteerd in de opgegeven kolom ({kolom}) van de tabel.")  
     else:
-        print("Er zijn geen dubbele business keys gedetecteerd in de opgegeven tabel.")  
+        raise ValueError(f"Niet alle waarden in de kolom '{kolom}' zijn uniek.")
     return
 
 def tijdzone_amsterdam():
@@ -174,7 +175,7 @@ def bepaal_veranderde_records(huidig_df: DataFrame, nieuw_df: DataFrame, busines
 
     return df_verandert_filter, df_verwijderd, df_opnieuw_ingevoerd, df_ingevoegd
 
-def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key: str, naam_nieuw_df: str):
+def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key: str, naam_nieuw_df: str, naam_id: str, naam_bk: str):
     """
     Bereid gegevens voor op historisering door historische data te markeren met relevante metadata.
 
@@ -183,38 +184,53 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
         - schema_catalog (str): Naam van het schema waar de tabel moet worden opgeslagen.
         - business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
         - naam_nieuw_df (str): Naam van het nieuwe DataFrame in de catalogus.
+        - naam_id (str): Naam van de id (surrogaat_sleutel/pk)
+        - naam_bk (str): Naam van de business_key (bk)
 
-    Laatste update: 10-01-2023
+    Laatste update: 26-01-2023
     """
     # Controleer of het nieuwe DataFrame de vereiste kolommen bevat
-    vereiste_kolommen = ['geldig_van', 'geldig_tot', 'surrogaat_sleutel', 'record_actief', 'actie']
+    vereiste_kolommen = ['mtd_geldig_van', 'mtd_geldig_tot', naam_bk, 'mtd_record_actief', 'mtd_actie']
     ontbrekende_kolommen = [kolom for kolom in vereiste_kolommen if kolom not in df.columns]
+
+    # Controleer of de opgegeven identifier uniek is
+    controle_unieke_waarden_kolom(df=df, kolom=business_key)
     
+    # Als het een dimensietable betreft een record aanmaken voor missende waarden
+    if "_d_" in naam_nieuw_df:
+        c
+         Create a new list of lists with concatenated strings
+new_data = [[f"{col} heeft geen waarde" for col in columns]]
+
     if ontbrekende_kolommen:      
         # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
         huidige_datum_tz = tijdzone_amsterdam()
 
         # Werk de einddatum, record_actief en begindatum kolommen bij in het huidige DataFrame
         print(f"Ontbrekende kolommen: {', '.join(ontbrekende_kolommen)}. Deze worden aan het DataFrame toegevoegd...")
-        is_valid_uuid_udf = udf(lambda x: is_valid_uuid(str(x)) if x is not None else False, BooleanType())
-        temp_df = (df.withColumn("geldig_van", huidige_datum_tz) 
-            .withColumn("geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss")) 
-            .withColumn("record_actief", lit(True)) 
-            .withColumn("actie", lit("inserted")))
-        temp_df = voeg_willekeurig_toe_en_hash_toe(df=temp_df, business_key=business_key)
+
+        temp_df = (df.withColumn("mtd_geldig_van", huidige_datum_tz) 
+                        .withColumn("mtd_geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss")) 
+                        .withColumn("mtd_record_actief", lit(True)) 
+                        .withColumn("mtd_actie", lit("inserted"))
+                        .withColumn(naam_bk, col(business_key)))
+        
+        temp_df = voeg_willekeurig_toe_en_hash_toe(df=temp_df, business_key=business_key, pk=naam_id)
 
         # Controleer of de opgegeven identifier uniek is
-        controle_unieke_bk(df=temp_df, business_key=business_key)
-       
+        controle_unieke_waarden_kolom(df=temp_df, kolom=naam_id)
+        
         # Bepaal de juiste volgorde van de kolommen
-        volgorde_kolommen = [business_key, "record_actief", "surrogaat_sleutel", "geldig_van", "geldig_tot", "actie"]
+        volgorde_kolommen = [naam_bk, naam_id, "mtd_record_actief", "mtd_geldig_van", "mtd_geldig_tot", "mtd_actie"]
         output_volgorde, _ = bepaal_kolom_volgorde(df = temp_df, gewenste_kolom_volgorde = volgorde_kolommen)
-        output_volgorde_cached = output_volgorde.cache()
+        output_volgorde_cached = (output_volgorde.cache()) #.cache())
         
         # Sla de gegevens op in delta-formaat in het opgegeven schema
         print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}.")
         output_volgorde_cached.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite')
-        return
+    
+    
+    return
     
 def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_catalog: str, naam_nieuw_df: str, huidig_dwh: str = None):
     """
@@ -299,39 +315,49 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_cat
     output = rejoined_huidig_dwh_tabel.union(df_nieuwe_tabel_samengevoegd_ss).cache()
 
     # Controleer of alle surrogaat_sleutels in de tabel uniek zijn
-    controle_unieke_bk(df=output, business_key=business_key)
+    controle_unieke_waarden_kolom(df=output, kolom=business_key)
 
     # Sla de gegevens op in delta-formaat in het opgegeven schema
     print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}")
     output.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite') # is langzaam (single node)
     return
 
-def toepassen_historisering(bestaande_tabel, schema_catalog: str, business_key: str, naam_tabel=None, huidig_dwh: str = None):
+def toepassen_historisering(bestaande_tabel, schema_catalog: str, naam_tabel: str, business_key: str, naam_bk: str, naam_id: str, huidig_dwh: str = None):
     """
     Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en heeft hiermee de controle over de uitvoering van het historiseringsproces.
 
     Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar een SQL temporary view of Python DataFrame. Wanneer jij bij bestaande_tabel een Python DataFrame opgeeft, moet je verplicht naam_tabel invullen. Aangezien Python geen objectnaam kan afleiden van objecten.
     
     Args:
-        bestaande_tabel (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view met gewijzigde gegeven of een Python DataFrame
+        bestaande_tabel (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view met gewijzigde gegeven (str)
+                                           met de suffix '_temp_view' erachter of een Python DataFrame
         schema_catalog (str): Naam van het schema en catalog waar de tabel instaat of opgeslagen moet worden. 
                                 Bijvoorbeeld: {catalog.schema} = "dpms_dev.silver"
+        naam_tabel (str): Naam van DataFrame/Tabel zoals die opgeslagen is / moet worden in de opgegeven catalog/schema
         business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
-        naam_tabel (str, verplicht bij opgegeven Python DataFrames): Naam van DataFrame/Tabel zoals die opgeslagen is in het opgegeven schema/catalog
+        naam_bk (str): Naam van de business_key (gerelateerd aan business_key)
+        naam_id (str): Naam van de primary key (surrogaat_sleutel)
         huidig_dwh (str, optioneel): Naam van het huidige DWH DataFrame. Indien niet opgegeven, wordt
                                      de huidige tabelnaam van 'nieuw_df' gebruikt (komt overeen met het DWH).
-
-    Laatste update: 09-01-2024
+        
+    Laatste update: 26-01-2024
 
     Raises:
         ValueError: Als de tabel/dataframe-naam niet kan worden afgeleid vanuit het object. 
                     Indien je bij bestaande_tabel een Python DataFrame meegeeft, moet je de naam van de tabel geven 
                     zoals bij naam_tabel.
     """   
+    # Check voor invoer correcte waarde
+    if "mtd_" not in naam_id or "mtd_" not in naam_bk:
+        raise ValueError("Aangezien het om meta (mtd) kolommen gaat, graag de volgende prefix invoeren bij de naam_id en naam_bk: 'mtd_' ")
+
     # Bepaal of de input een SQL temporary view is of een PySpark dataframe.
     if type(bestaande_tabel) == str:
-        naam_bestaande_tabel = bestaande_tabel.replace("_temp_view", "")
-        temp_bestaande_tabel = spark.table(naam_bestaande_tabel).cache()
+        if "_temp_view" in bestaande_tabel:
+            naam_bestaande_tabel = bestaande_tabel.replace("_temp_view", "")
+            temp_bestaande_tabel = spark.table(naam_bestaande_tabel).cache()
+        else:
+            raise ValueError("De temporary view is niet voorzien van de juist suffix: '_temp_view'")
         
     elif type(bestaande_tabel) != str and (naam_tabel is not None and naam_tabel != ""):
         temp_bestaande_tabel = bestaande_tabel.cache()
@@ -347,8 +373,8 @@ def toepassen_historisering(bestaande_tabel, schema_catalog: str, business_key: 
     # Controleer of de opgegeven tabel al bestaat in het opgegeven schema
     if naam_tabel in set_tabellen_catalog:
         print(f"De tabel: {naam_tabel} bevindt zich in de Unity Catalogus onder het volgende schema: {schema_catalog}")
-        updaten_historisering_dwh(nieuw_df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel)
+        # updaten_historisering_dwh(nieuw_df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel, naam_id=naam_id, naam_bk=naam_bk) 
     else:
         print(f"Dit is de eerste keer dat je de tabel: {naam_tabel} wilt historiseren. Historisering wordt nu toegepast...")
-        initialiseer_historisering(df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel)
+        initialiseer_historisering(df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel, naam_id=naam_id, naam_bk=naam_bk)
     return "Historisering is toegepast!"
