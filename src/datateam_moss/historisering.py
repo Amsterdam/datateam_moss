@@ -1,3 +1,4 @@
+# Databricks notebook source
 # Inladen packages
 import sys
 import time
@@ -175,7 +176,7 @@ def bepaal_veranderde_records(huidig_df: DataFrame, nieuw_df: DataFrame, busines
 
     return df_verandert_filter, df_verwijderd, df_opnieuw_ingevoerd, df_ingevoegd
 
-def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key: str, naam_nieuw_df: str, naam_id: str, naam_bk: str):
+def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key: str, naam_nieuw_df: str, naam_id: str, naam_bk: str, overwrite_schema: bool):
     """
     Bereid gegevens voor op historisering door historische data te markeren met relevante metadata.
 
@@ -227,10 +228,10 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
         
         # Sla de gegevens op in delta-formaat in het opgegeven schema
         print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}.")
-        output_volgorde_cached.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite')
+        output_volgorde_cached.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite', overwriteSchema=overwrite_schema)    
     return
     
-def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_catalog: str, naam_nieuw_df: str, huidig_dwh: str = None):
+def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_catalog: str, naam_nieuw_df: str, overwrite_schema: bool, huidig_dwh: str = None):
     """
     Voegt historische gegevens toe aan een PySpark DataFrame om wijzigingen bij te houden.
 
@@ -317,10 +318,10 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_cat
 
     # Sla de gegevens op in delta-formaat in het opgegeven schema
     print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}")
-    output.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite') # is langzaam (single node)
+    output.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite', overwriteSchema=overwrite_schema) # is langzaam (single node)
     return
 
-def toepassen_historisering(bestaande_tabel, schema_catalog: str, naam_tabel: str, business_key: str, naam_bk: str, naam_id: str, huidig_dwh: str = None):
+def toepassen_historisering(bestaande_tabel, schema_catalog: str, naam_tabel: str, business_key: str, naam_bk: str, naam_id: str, huidig_dwh: str = None, overwrite_schema: bool = False):
     """
     Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en heeft hiermee de controle over de uitvoering van het historiseringsproces.
 
@@ -371,8 +372,8 @@ def toepassen_historisering(bestaande_tabel, schema_catalog: str, naam_tabel: st
     # Controleer of de opgegeven tabel al bestaat in het opgegeven schema
     if naam_tabel in set_tabellen_catalog:
         print(f"De tabel: {naam_tabel} bevindt zich in de Unity Catalogus onder het volgende schema: {schema_catalog}")
-        # updaten_historisering_dwh(nieuw_df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel, naam_id=naam_id, naam_bk=naam_bk) 
+        updaten_historisering_dwh(nieuw_df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel, naam_id=naam_id, naam_bk=naam_bk, overwrite_schema=overwrite_schema) 
     else:
         print(f"Dit is de eerste keer dat je de tabel: {naam_tabel} wilt historiseren. Historisering wordt nu toegepast...")
-        initialiseer_historisering(df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel, naam_id=naam_id, naam_bk=naam_bk)
+        initialiseer_historisering(df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel, naam_id=naam_id, naam_bk=naam_bk, overwrite_schema=overwrite_schema)
     return "Historisering is toegepast!"

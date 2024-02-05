@@ -149,6 +149,11 @@ class Dataset:
     def print_stats(self, table_name=None):
         """
         Prints out the table statistics for all tables in the dataset or one provided.
+
+        Args:
+            table_name (str, optional): The name of the table. Defaults to None.
+
+        Only prints the table statistics in markdown.
         """
         if table_name == None:
             for table_name in self.tables:

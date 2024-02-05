@@ -57,7 +57,7 @@ Voor het gebruik van de historisering functies volg het volgende stappenplan:
 #### Let op! ####
 
 # Wanneer jij de package geïnstalleerd hebt, moet je de package nog inladen.
-import dpms
+import datateam_moss as dpms
 
 # Nu kan je de verschillende functies aanroepen. De regisseursfunctie voor historisering is toepassen_historisering().
 # Dit doe je, bijvoorbeeld, als volgt:
