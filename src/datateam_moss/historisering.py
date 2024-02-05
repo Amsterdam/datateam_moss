@@ -371,7 +371,7 @@ def toepassen_historisering(bestaande_tabel, schema_catalog: str, naam_tabel: st
 
     # Controleer of de opgegeven tabel al bestaat in het opgegeven schema
     if naam_tabel in set_tabellen_catalog:
-        raise ProgramError("De code is nog aan het ontwikkelen. Hierdoor werkt de update functionaliteit nog niet naar behoren.")
+        raise NotImplementedError("De code is nog aan het ontwikkelen. Hierdoor werkt de update functionaliteit nog niet naar behoren.")
         #print(f"De tabel: {naam_tabel} bevindt zich in de Unity Catalogus onder het volgende schema: {schema_catalog}")
         # updaten_historisering_dwh(nieuw_df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel, naam_id=naam_id, naam_bk=naam_bk, overwrite_schema=overwrite_schema) 
     else:
