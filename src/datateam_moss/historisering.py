@@ -196,11 +196,11 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
     # Controleer of de opgegeven identifier uniek is
     controle_unieke_waarden_kolom(df=df, kolom=business_key)
     
-    # Als het een dimensietable betreft een record aanmaken voor missende waarden
-    if "_d_" in naam_nieuw_df:
-        c
-         Create a new list of lists with concatenated strings
-new_data = [[f"{col} heeft geen waarde" for col in columns]]
+#     # Als het een dimensietable betreft een record aanmaken voor missende waarden
+#     if "_d_" in naam_nieuw_df:
+#         c
+#          Create a new list of lists with concatenated strings
+#         new_data = [[f"{col} heeft geen waarde" for col in columns]]
 
     if ontbrekende_kolommen:      
         # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
@@ -228,8 +228,6 @@ new_data = [[f"{col} heeft geen waarde" for col in columns]]
         # Sla de gegevens op in delta-formaat in het opgegeven schema
         print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}.")
         output_volgorde_cached.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite')
-    
-    
     return
     
 def updaten_historisering_dwh(nieuw_df: DataFrame, business_key: str, schema_catalog: str, naam_nieuw_df: str, huidig_dwh: str = None):
