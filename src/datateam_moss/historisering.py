@@ -312,78 +312,84 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, schema_catalog: str, business
     # Bepaal de juiste volgorde van de kolommen
     volgorde_kolommen_gewenst = [business_key, naam_id, "mtd_record_actief",  "mtd_geldig_van", "mtd_geldig_tot", "mtd_actie"]
     _, volgorde_kolommen = bepaal_kolom_volgorde(df = huidig_dwh_tabel, gewenste_kolom_volgorde = volgorde_kolommen_gewenst)
-    print(f' Tot bepaal_kolom_volgorde werkt alles: {datetime.now()}')
-    
+    #print(f' Tot bepaal_kolom_volgorde werkt alles: {datetime.now()}')
+
     # Roep de functie bepaal_veranderde_records aan om de records te krijgen van rijen die veranderd zijn
     unieke_df_id_verandert, unieke_df_id_verwijdert, unieke_df_id_opnieuw_ingevoegd, unieke_df_id_toegevoegd = bepaal_veranderde_records(huidig_df=huidig_dwh_tabel, nieuw_df=nieuw_df, business_key=business_key, naam_bk=naam_bk, naam_id=naam_id)
-    print(f' Tot bepaal_kolom_volgorde werkt alles: {datetime.now()}')
+    #print(f' Tot bepaal_kolom_volgorde werkt alles: {datetime.now()}')
 
-    # Voeg alle losse dataframes samen om later te broadcasten
-    df_bk_samengevoegd_1 = (unieke_df_id_verwijdert.union(unieke_df_id_verandert))
-    df_bk_samengevoegd_2 = (unieke_df_id_verandert.union(unieke_df_id_opnieuw_ingevoegd).union(unieke_df_id_toegevoegd))
+    # Check of er een wijziging is
+    if all(df.isEmpty() for df in [unieke_df_id_verandert, unieke_df_id_verwijdert, unieke_df_id_opnieuw_ingevoegd, unieke_df_id_toegevoegd]):
+        # Sla de gegevens op in delta-formaat in het opgegeven schema
+        print(f"Er zijn geen wijzigingen constateert in vergelijking met de vorige versie. De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}")
+        huidig_dwh_tabel.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite', overwriteSchema=overwrite_schema) # is langzaam (single node)  
+        return
+    else:
+        # Voeg alle losse dataframes samen om later te broadcasten
+        df_bk_samengevoegd_1 = (unieke_df_id_verwijdert.union(unieke_df_id_verandert))
+        df_bk_samengevoegd_2 = (unieke_df_id_verandert.union(unieke_df_id_opnieuw_ingevoegd).union(unieke_df_id_toegevoegd))
 
-    # Dataframes opsplitsen in delen die wel aangepast moeten worden en ander deel niet.
-    # Dit doen wij voor de efficiëntie en optimalisatie van de functie
-    # Aangezien we met de id's filteren kan het contra-intuïtief zijn om bij geen_aanpassing een left_anti join te gebruiken
-    huidig_dwh_tabel_geen_aanpassing = (huidig_dwh_tabel.join(broadcast(df_bk_samengevoegd_1), business_key, "left_anti").select(*volgorde_kolommen))
-    huidig_dwh_tabel_wel_aanpassing = (huidig_dwh_tabel.join(broadcast(df_bk_samengevoegd_1), business_key).select(*volgorde_kolommen))
+        # Dataframes opsplitsen in delen die wel aangepast moeten worden en ander deel niet.
+        # Dit doen wij voor de efficiëntie en optimalisatie van de functie
+        # Aangezien we met de id's filteren kan het contra-intuïtief zijn om bij geen_aanpassing een left_anti join te gebruiken
+        huidig_dwh_tabel_geen_aanpassing = (huidig_dwh_tabel.join(broadcast(df_bk_samengevoegd_1), business_key, "left_anti").select(*volgorde_kolommen))
+        huidig_dwh_tabel_wel_aanpassing = (huidig_dwh_tabel.join(broadcast(df_bk_samengevoegd_1), business_key).select(*volgorde_kolommen))
 
-    # Maak een opsplitsing voor de verschillende stappen
-    huidig_dwh_verwijderd = (huidig_dwh_tabel_wel_aanpassing.join(unieke_df_id_verwijdert, business_key, "inner")
-                             .withColumn("mtd_actie", lit("deleted")))
-    huidig_dwh_verandert = (huidig_dwh_tabel_wel_aanpassing.join(unieke_df_id_verandert, business_key, "inner"))
+        # Maak een opsplitsing voor de verschillende stappen
+        huidig_dwh_verwijderd = (huidig_dwh_tabel_wel_aanpassing.join(unieke_df_id_verwijdert, business_key, "inner")
+                                .withColumn("mtd_actie", lit("deleted")))
+        huidig_dwh_verandert = (huidig_dwh_tabel_wel_aanpassing.join(unieke_df_id_verandert, business_key, "inner"))
 
-    # Voeg ze weer samen
-    huidig_dwh_tabel_wel_aanpassing = (huidig_dwh_verwijderd.union(huidig_dwh_verandert))
+        # Voeg ze weer samen
+        huidig_dwh_tabel_wel_aanpassing = (huidig_dwh_verwijderd.union(huidig_dwh_verandert))
 
-    # Pas de records in het DWH (huidige tabel) aan die veranderd zijn
-    temp_huidig_dwh_tabel = (huidig_dwh_tabel_wel_aanpassing
-                             .withColumn("nieuwe_geldig_tot", huidige_datum_tz)
-                             .withColumn("record_actief_update", lit(False))
-                             .drop("mtd_geldig_tot").withColumnRenamed("nieuwe_geldig_tot", "mtd_geldig_tot")
-                             .drop("mtd_record_actief").withColumnRenamed("record_actief_update", "mtd_record_actief")
-                             .select(*volgorde_kolommen))
-    print(f' Tot temp_huidig_dwh_tabel werkt alles: {datetime.now()}')
+        # Pas de records in het DWH (huidige tabel) aan die veranderd zijn
+        temp_huidig_dwh_tabel = (huidig_dwh_tabel_wel_aanpassing
+                                .withColumn("nieuwe_geldig_tot", huidige_datum_tz)
+                                .withColumn("record_actief_update", lit(False))
+                                .drop("mtd_geldig_tot").withColumnRenamed("nieuwe_geldig_tot", "mtd_geldig_tot")
+                                .drop("mtd_record_actief").withColumnRenamed("record_actief_update", "mtd_record_actief")
+                                .select(*volgorde_kolommen))
+        #print(f' Tot temp_huidig_dwh_tabel werkt alles: {datetime.now()}')
 
-    # Voeg de 2 delen van het DWH weer samen
-    rejoined_huidig_dwh_tabel = (huidig_dwh_tabel_geen_aanpassing
-                                 .union(temp_huidig_dwh_tabel).select(*volgorde_kolommen)
-                                 .repartition(10).cache())
-                       
-    # Dataframes filteren op de id's die aangepast zijn en met de nieuwe gegevens weer toegevoegd worden aan de DWH 
-    # 'Broadcast' van business_keys voor join speed_optimalisatie 
-    temp_nieuw_df_wel_aanpassing = nieuw_df.join(broadcast(df_bk_samengevoegd_2), business_key) 
+        # Voeg de 2 delen van het DWH weer samen
+        rejoined_huidig_dwh_tabel = (huidig_dwh_tabel_geen_aanpassing
+                                    .union(temp_huidig_dwh_tabel).select(*volgorde_kolommen)
+                                    .repartition(10).cache())
+                        
+        # Dataframes filteren op de id's die aangepast zijn en met de nieuwe gegevens weer toegevoegd worden aan de DWH 
+        # 'Broadcast' van business_keys voor join speed_optimalisatie 
+        temp_nieuw_df_wel_aanpassing = nieuw_df.join(broadcast(df_bk_samengevoegd_2), business_key) 
 
-    print(f' Tot temp_nieuw_df_wel_aanpassing werkt alles: {datetime.now()}')
-     
-    # Maak voor iedere individuele actie een tabel en pas de actie kolom aan 
-    df_toegevoegd = (temp_nieuw_df_wel_aanpassing.join(unieke_df_id_toegevoegd, business_key, "inner").withColumn("mtd_actie", lit("inserted")))
-    df_opnieuw_ingevoegd = (temp_nieuw_df_wel_aanpassing.join(unieke_df_id_opnieuw_ingevoegd, business_key, "inner")
-                            .withColumn("mtd_actie", lit("reinserted")))
-    df_verandert = (temp_nieuw_df_wel_aanpassing.join(unieke_df_id_verandert, business_key, "inner").withColumn("mtd_actie", lit("changed")))
-    
-    print(f' Tot preprocess_overige_dfs werkt alles: {datetime.now()}')
+        #print(f' Tot temp_nieuw_df_wel_aanpassing werkt alles: {datetime.now()}')
+        
+        # Maak voor iedere individuele actie een tabel en pas de actie kolom aan 
+        df_toegevoegd = (temp_nieuw_df_wel_aanpassing.join(unieke_df_id_toegevoegd, business_key, "inner").withColumn("mtd_actie", lit("inserted")))
+        df_opnieuw_ingevoegd = (temp_nieuw_df_wel_aanpassing.join(unieke_df_id_opnieuw_ingevoegd, business_key, "inner")
+                                .withColumn("mtd_actie", lit("reinserted")))
+        df_verandert = (temp_nieuw_df_wel_aanpassing.join(unieke_df_id_verandert, business_key, "inner").withColumn("mtd_actie", lit("changed")))
+        #print(f' Tot preprocess_overige_dfs werkt alles: {datetime.now()}')
 
-    # voeg dataframes weer samen en pas historiseringskolommen aan
-    df_nieuwe_tabel_samengevoegd = (df_toegevoegd.union(df_opnieuw_ingevoegd).union(df_verandert) 
-                                    .withColumn(naam_id, lit(None))
-                                    .withColumn("mtd_record_actief", lit(True))
-                                    .withColumn("mtd_geldig_van", huidige_datum_tz)
-                                    .withColumn("mtd_geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss"))
-                                    .select(*volgorde_kolommen) .repartition(10).cache())
-    df_nieuwe_tabel_samengevoegd_ss = voeg_willekeurig_toe_en_hash_toe(df=df_nieuwe_tabel_samengevoegd, business_key=business_key, pk=naam_id)
+        # voeg dataframes weer samen en pas historiseringskolommen aan
+        df_nieuwe_tabel_samengevoegd = (df_toegevoegd.union(df_opnieuw_ingevoegd).union(df_verandert) 
+                                        .withColumn(naam_id, lit(None))
+                                        .withColumn("mtd_record_actief", lit(True))
+                                        .withColumn("mtd_geldig_van", huidige_datum_tz)
+                                        .withColumn("mtd_geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss"))
+                                        .select(*volgorde_kolommen).repartition(10).cache())
+        df_nieuwe_tabel_samengevoegd_ss = voeg_willekeurig_toe_en_hash_toe(df=df_nieuwe_tabel_samengevoegd, business_key=business_key, pk=naam_id)
 
-    # Sorteer beide dataframe op kolommen, zodat ze samengevoegd kunnen worden
-    output = rejoined_huidig_dwh_tabel.union(df_nieuwe_tabel_samengevoegd_ss).cache()
-    print(f' Tot line 377 werkt alles: {datetime.now()}')
+        # Sorteer beide dataframe op kolommen, zodat ze samengevoegd kunnen worden
+        output = rejoined_huidig_dwh_tabel.union(df_nieuwe_tabel_samengevoegd_ss).cache()
+        print(f' Tot line 377 werkt alles: {datetime.now()}')
 
-    # Controleer of alle surrogaat_sleutels in de tabel uniek zijn
-    controle_unieke_waarden_kolom(df=output, kolom=naam_id)
+        # Controleer of alle surrogaat_sleutels in de tabel uniek zijn
+        controle_unieke_waarden_kolom(df=output, kolom=naam_id)
 
-    # Sla de gegevens op in delta-formaat in het opgegeven schema
-    print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}")
-    output.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite', overwriteSchema=overwrite_schema) # is langzaam (single node)
-    return
+        # Sla de gegevens op in delta-formaat in het opgegeven schema
+        print(f"De tabel wordt nu opgeslagen in {schema_catalog} onder de naam: {naam_nieuw_df}")
+        output.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite', overwriteSchema=overwrite_schema) # is langzaam (single node)
+        return
 
 def toepassen_historisering(bestaande_tabel, schema_catalog: str, naam_tabel: str, business_key: str, naam_bk: str, naam_id: str, huidig_dwh: str = None, overwrite_schema: bool = False):
     """
@@ -440,10 +446,9 @@ def toepassen_historisering(bestaande_tabel, schema_catalog: str, naam_tabel: st
 
     # Controleer of de opgegeven tabel al bestaat in het opgegeven schema
     if naam_tabel in set_tabellen_catalog:
-        #raise NotImplementedError("De code is nog aan het ontwikkelen. Hierdoor werkt de update functionaliteit nog niet naar behoren.")
         print(f"De tabel: {naam_tabel} bevindt zich in de Unity Catalogus onder het volgende schema: {schema_catalog}")
         updaten_historisering_dwh(nieuw_df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel, naam_id=naam_id, naam_bk=naam_bk, overwrite_schema=overwrite_schema)
     else:
         print(f"Dit is de eerste keer dat je de tabel: {naam_tabel} wilt historiseren. Historisering wordt nu toegepast...")
         initialiseer_historisering(df=temp_bestaande_tabel, schema_catalog=schema_catalog, business_key=business_key, naam_nieuw_df=naam_tabel, naam_id=naam_id, naam_bk=naam_bk, overwrite_schema=overwrite_schema)
-    return "Historisering is toegepast!"
+    return "Einde functie"
