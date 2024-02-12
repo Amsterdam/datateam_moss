@@ -61,36 +61,30 @@ import datateam_moss as dpms
 
 # Nu kan je de verschillende functies aanroepen. De regisseursfunctie voor historisering is toepassen_historisering().
 # Dit doe je, bijvoorbeeld, als volgt:
-dpms.toepassen_historisering(bestaande_tabel=pyspark_df, 
-                              schema_catalog="dpms_dev.silver",
-                              business_key="account_id",
-                              naam_tabel="test_dwh_historisering")
+dpms.toepassen_historisering(bestaande_tabel=df_cleaned, schema_catalog=f"{CATALOG}.{layer}",
+                             naam_tabel="crm_locatieorganisaties", business_key="ams_locatieorganisatieid",
+                             naam_bk="mtd_locatieorganisatie_bk",  naam_id="mtd_locatieorganisatie_id")
 
 # Hieronder nog de documentatie van regisseursfunctie. Je zou dit zelf ook kunnen opzoeken in de /src-map.
  """
     Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en heeft hiermee de controle over de uitvoering van het historiseringsproces.
 
-    Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar een SQL temporary view of Python DataFrame.
-    Wanneer jij bij bestaande_tabel een Python DataFrame opgeeft, moet je verplicht naam_tabel invullen.
-    Aangezien Python geen objectnaam kan afleiden van objecten.
+    Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar een SQL temporary view of Python DataFrame. Wanneer jij bij bestaande_tabel een Python DataFrame opgeeft, moet je verplicht naam_tabel invullen. Aangezien Python geen objectnaam kan afleiden van objecten.
     
     Args:
-        bestaande_tabel (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view
-                                             met gewijzigde gegeven of een Python DataFrame
+        bestaande_tabel (str of object): Naam van het nieuwe DataFrame dat verwijst naar een temporary view met gewijzigde gegeven (str)
+                                           met de suffix '_temp_view' erachter of een Python DataFrame
         schema_catalog (str): Naam van het schema en catalog waar de tabel instaat of opgeslagen moet worden. 
                                 Bijvoorbeeld: {catalog.schema} = "dpms_dev.silver"
+        naam_tabel (str): Naam van DataFrame/Tabel zoals die opgeslagen is / moet worden in de opgegeven catalog/schema
         business_key (str): Naam van de kolom die wordt gebruikt om unieke rijen te identificeren.
-        naam_tabel (str, verplicht bij opgegeven Python DF): Naam van DataFrame/Tabel zoals
-                                                              die opgeslagen is in het opgegeven schema/catalog
+        naam_bk (str): Naam van de business_key (gerelateerd aan business_key)
+        naam_id (str): Naam van de primary key (surrogaat_sleutel)
         huidig_dwh (str, optioneel): Naam van het huidige DWH DataFrame. Indien niet opgegeven, wordt
                                      de huidige tabelnaam van 'nieuw_df' gebruikt (komt overeen met het DWH).
-
-    Laatste update: 09-01-2024
-
-    Raises:
-        ValueError: Als de tabel/dataframe-naam niet kan worden afgeleid vanuit het object. 
-                    Indien je bij bestaande_tabel een Python DataFrame meegeeft, moet je de naam van de tabel geven 
-                    zoals bij naam_tabel.
+        overwrite_schema (bool): Met deze boolean kun je aangeven of het schema van de tabel overschreven mag worden.
+                                 - True -> mag overschreven worden
+                                 - False -> mag NIET overschreven worden (default) 
     """   
 ```
 
@@ -98,11 +92,11 @@ dpms.toepassen_historisering(bestaande_tabel=pyspark_df,
 De functie heeft de volgende functionaliteit:
 | kolomnaam | beschrijving | voorbeeld | 
 | ------ | ------ | ------ |
-| surrogaat_sleutel | Dit is een integer waarin o.b.v. een unieke business identifier bepaalt wordt of er dubbele records inzitten. Het kan namelijk zo zijn dat er bepaalde kolommen veranderen over tijd. De surrogaatsleutel zorgt ervoor dat dezelfde business identifier uniek is. | 1 | 
-| record_actief | Deze kolom bepaalt of de record actief is. Het kan namelijk voorkomen dat o.b.v. een identifier dubbele records zijn, waarvan 1 record historisch is. Door deze kolom kan je makkelijker filteren op de actieve records | True |
-| geldig_van | Deze kolom geeft aan vanaf welk moment de record actief is. De tijd wordt aangegeven met de Nederlandse tijdzone en nauwkeurig tot op de seconde | 2023-12-31 23:59:59 | 
-| geldig_tot | Deze kolom geef aan op welk moment de record aangepast is. Als er een aanpassing heeft plaatsgevonden, is dit niet meer het de recenste record. De record wordt gesloten op de aanpassingdatum en er wordt een nieuw record, met de verandering, aangemaakt. | 9999-12-31 23:59:59 |
-| actie | Deze kolom geeft aan wat er met de record gebeurd is: inserted, changed, deleted, reinserted | inserted |
+| {naam_id} | Dit is een integer waarin o.b.v. een unieke business identifier bepaalt wordt of er dubbele records inzitten. Het kan namelijk zo zijn dat er bepaalde kolommen veranderen over tijd. De surrogaatsleutel zorgt ervoor dat dezelfde business identifier uniek is. | 1 | 
+| mtd_record_actief | Deze kolom bepaalt of de record actief is. Het kan namelijk voorkomen dat o.b.v. een identifier dubbele records zijn, waarvan 1 record historisch is. Door deze kolom kan je makkelijker filteren op de actieve records | True |
+| mtd_geldig_van | Deze kolom geeft aan vanaf welk moment de record actief is. De tijd wordt aangegeven met de Nederlandse tijdzone en nauwkeurig tot op de seconde | 2023-12-31 23:59:59 | 
+| ,td_geldig_tot | Deze kolom geef aan op welk moment de record aangepast is. Als er een aanpassing heeft plaatsgevonden, is dit niet meer het de recenste record. De record wordt gesloten op de aanpassingdatum en er wordt een nieuw record, met de verandering, aangemaakt. | 9999-12-31 23:59:59 |
+| mtd_actie | Deze kolom geeft aan wat er met de record gebeurd is: inserted, changed, deleted, reinserted | inserted |
 
 Verder controleert deze functies of de opgegeven business_key uniek is in de aangeleverde tabel. Als er dubbele business keys inzitten kan er niet bepaald worden wat er met de record moet gebeuren.
 
