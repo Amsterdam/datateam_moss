@@ -67,9 +67,11 @@ dpms.toepassen_historisering(bestaande_tabel=df_cleaned, schema_catalog=f"{CATAL
 
 # Hieronder nog de documentatie van regisseursfunctie. Je zou dit zelf ook kunnen opzoeken in de /src-map.
  """
-    Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en heeft hiermee de controle over de uitvoering van het historiseringsproces.
+    Deze regisseurfunctie roept op basis van bepaalde criteria andere functies aan en
+      heeft hiermee de controle over de uitvoering van het historiseringsproces.
 
-    Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar een SQL temporary view of Python DataFrame.
+    Deze functie gaat ervan uit dat je een string opgeeft die verwijst naar
+        een SQL temporary view of Python DataFrame.
     Wanneer jij bij bestaande_tabel een Python DataFrame opgeeft, moet je verplicht naam_tabel invullen.
     Aangezien Python geen objectnaam kan afleiden van objecten.
     
