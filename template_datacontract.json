@@ -1,0 +1,52 @@
+{
+  "Name": "dataset",
+  "Version": "v0",
+  "Description": "",
+  "Business goal": "",
+  "Theme": "X",
+  "Collection": "X",
+  "Data Team": "MOSS+",
+  "Data Product Owner": "xxx@amsterdam.nl",
+  "Data Steward": "",
+  "Language": "Nederlands",
+  "Confidentiality": "Confidential",
+  "BIO Quickscan": "Done",
+  "Privacy": "Niet persoonlijk identificeerbaar",
+  "Privacy Quickscan": "Done",
+  "Geo Data": "",
+  "History Start": "",
+  "Refresh Rate": "",
+  "End Date": "",
+  "Schema": {
+    "Tables": [
+      {
+        "name": "voorbeeld",
+        "attributes": [
+          {
+            "id": {
+              "type": "integer",
+              "description": "Unieke id van het object"
+            },
+            "schema": {
+              "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+            },
+            "column_x": {
+              "type": "string",
+              "term": "Column X",
+              "description": "Description of column X"
+            },
+            "kolom_y": {
+              "type": "boolean",
+              "term": "Kolom Y",
+              "description": "Description of kolom Y"
+            },
+            "geometrie": {
+              "$ref": "https://geojson.org/schema/Polygon.json",
+              "term": "Geometrie",
+              "description": "Geometrie in RD (epsg:28992)"
+            }
+        ]
+      }
+    ]
+  }
+}
