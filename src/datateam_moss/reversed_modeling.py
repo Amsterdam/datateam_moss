@@ -249,19 +249,21 @@ class Dataset:
     #     # print relations
     #     for c1, c2, r_type in self.relations:
     #         print(f' {r_type} '.join((c1, c2)))
-    def print_eraser_code(self):
+    def print_eraser_code(self, include_relations=False):
         # Collect the DataFrame as a list of rows and directly create and print the dictionary
         for table_name, columns in self.tables_dict.items():
             print(f"{table_name} {{")
             [print(f"    {c} {dtype}") for c, dtype in columns]
             print("}\n")
 
-        # print relations
-        if not hasattr(self, 'relations'):
-            self.relations = self._get_relations()
-        
-        for c1, c2, r_type in self.relations:
-            print(f"{c1} {r_type} {c2}")
+
+        if include_relations:
+            # print relations
+            if not hasattr(self, 'relations'):
+                self.relations = self._get_relations()
+            
+            for c1, c2, r_type in self.relations:
+                print(f"{c1} {r_type} {c2}")
             
 
 
