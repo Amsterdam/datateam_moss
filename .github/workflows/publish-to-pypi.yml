@@ -26,8 +26,14 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install pypa/build
-        run: python -m pip install build --user
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Bump version
+        run: |
+          bump2version patch --allow-dirty
 
       - name: Build a binary wheel and a source tarball
         run: python -m build
