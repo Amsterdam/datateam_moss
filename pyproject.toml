@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "datateam_moss"
-version = "0.0.43"
+version = "0.0.44"
 authors = [
   { name="Robbin Breeuwer", email="r.j.breeuwer@amsterdam.nl" },
   { name="Fried Schölvinck", email="f.scholvinck@amsterdam.nl"}
@@ -19,5 +19,5 @@ requires-python = ">=3.10"
 dependencies = [
   "tabulate==0.9.0",
   "pandas==1.4.4",
-  "xxhash"
+  "xxhash==3.4.1"
 ]
