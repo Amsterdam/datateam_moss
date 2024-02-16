@@ -1,13 +1,13 @@
-name: Publish Python distribution to PyPI
+name: Build and Test Python Distribution
 
 on:
-  pull_request:
-    types:
-      - closed
+  push:
+    branches:
+      - dev
 
 jobs:
-  build:
-    name: Build distribution
+  build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
 
     steps:
@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v2
         with:
           python-version: "3.x"
 
@@ -26,39 +26,9 @@ jobs:
 
       - name: Build a binary wheel and a source tarball
         run: python -m build
+      
+      - name: Run linting
+        run: pylint src/
 
       - name: Run tests
         run: pytest tests/
-
-      - name: Check if pull request is merged into main
-        if: |
-          github.event.pull_request.merged == true &&
-          github.event.pull_request.base.ref == 'main'
-        run: |
-          echo "Pull request has been accepted and merged into the main branch!"
-
-      - name: Store the distribution packages
-        uses: actions/upload-artifact@v3
-        with:
-          name: python-package-distributions
-          path: dist/
-
-  publish-to-pypi:
-    name: upload release to PyPI
-    needs:
-      - build
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://pypi.org/p/datateam_moss
-    permissions:
-      id-token: write
-    steps:
-      - name: Download all the dists
-        uses: actions/download-artifact@v3
-        with:
-          name: python-package-distributions
-          path: dist/
-
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1

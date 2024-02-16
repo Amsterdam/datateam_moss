@@ -20,19 +20,17 @@ class Dataset:
             dataset='dataset_name', # e.g. 'amis'
             excluded_table_names=['amis_test1', 'amis_test2']
         )
-        dataset.create_datacontract(write_to_landingzone=True)
-        dataset.print_eraser_code()
-        dataset.print_drawio_code()
+        contract = dataset.create_datacontract()
 
     Args:
         spark_session (SparkSession): The SparkSession to use, which is already loaded into each databricks notebooks as 'spark'.
         catalog (str): The name of the catalog.
-        schema (str): The name of the schema.
+        schema (str): The name of the schema. Defaults to 'gold'.
         dataset (str): The name of the dataset used as prefix for the tables. Defaults to '', using all tables in the schema.
         excluded_table_names (list, optional): A list of table names to exclude. Defaults to [].
     """
 
-    def __init__(self, spark_session, catalog: str, schema: str, dataset: str = '', excluded_table_names: list = []):
+    def __init__(self, spark_session, catalog: str, schema: str = 'gold', dataset: str = '', excluded_table_names: list = []):
         self.spark = spark_session
         self.catalog = catalog
         self.schema = schema
@@ -101,21 +99,58 @@ class Dataset:
             'int': 'integer'
         }.get(type, 'string')
 
-    def create_datacontract(self, version='v0', datateam='MOSS', product_owner='x.name@amsterdam.nl', description='Description of the dataset', business_goal='Business goal of the dataset', write_to_landingzone=True):
+    def create_datacontract(
+        self,
+        version: str = 'v0',
+        description: str = f'Description of the dataset',
+        business_goal: str = 'Business goal of the dataset',
+        theme: str = 'X',
+        collection: str = 'X',
+        datateam: str = 'MOSS',
+        product_owner: str = 'x.name@amsterdam.nl',
+        data_steward: str = '',
+        language: str = 'Nederlands',
+        confidentiality: str = 'Confidential',
+        bio_quickscan: str = 'Done',
+        privacy: str = 'Niet persoonlijk identificeerbaar',
+        privacy_quickscan: str = 'Done',
+        geo_data: str = '',
+        history_start: str = '',
+        refresh_rate: str = '',
+        end_date: str = '',
+        write_to_landingzone: bool = False,
+        output_path: str = None
+    ) -> str:
         """
-        Creates a datacontract for the dataset.
+        Creates a datacontract for the dataset for Data Management.
+
+        TODO: add amsterdam-schema "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema" options.
 
         Args:
             version (str, optional): The version of the datacontract. Defaults to 'v0'.
-            datateam (str, optional): The name of the data team. Defaults to 'MOSS'.
-            product_owner (str, optional): The email address of the data product owner. Defaults to 'x.name@amsterdam.nl'.
             description (str, optional): The description of the dataset. Defaults to 'Description of the dataset'.
             business_goal (str, optional): The business goal of the dataset. Defaults to 'Business goal of the dataset'.
+            theme (str, optional): The theme of the dataset. Defaults to 'X'.
+            collection (str, optional): The collection of the dataset. Defaults to 'X'.
+            datateam (str, optional): The name of the data team. Defaults to 'MOSS'.
+            product_owner (str, optional): The email address of the data product owner. Defaults to 'x.name@amsterdam.nl'.
+            data_steward (str, optional): The data steward of the dataset. Defaults to ''.
+            language (str, optional): The language of the dataset. Defaults to 'Nederlands'.
+            confidentiality (str, optional): The confidentiality of the dataset. Defaults to 'Confidential'.
+            bio_quickscan (str, optional): The BIO quickscan status of the dataset. Defaults to 'Done'.
+            privacy (str, optional): The privacy of the dataset. Defaults to 'Niet persoonlijk identificeerbaar'.
+            privacy_quickscan (str, optional): The privacy quickscan status of the dataset. Defaults to 'Done'.
+            geo_data (str, optional): The geo data of the dataset. Defaults to ''.
+            history_start (str, optional): The history start of the dataset. Defaults to ''.
+            refresh_rate (str, optional): The refresh rate of the dataset. Defaults to ''.
+            end_date (str, optional): The end date of the dataset. Defaults to ''.
             write_to_landingzone (bool, optional): Whether to write the datacontract to the landingzone. Defaults to True.
+            output_path (str, optional): The path to write the datacontract to. Defaults to f'/Volumes/{self.catalog}/default/landingzone/datacontracten/{self.dataset}.json'.
 
         Returns:
             str: The JSON representation of the datacontract.
         """
+        # easier with pandas
         pandas_df = self.information_schema.toPandas()
         tables = [
             {
@@ -137,27 +172,29 @@ class Dataset:
             "Version": version,
             "Description": description,
             "Business goal": business_goal,
-            "Theme": "X",
-            "Collection": "X",
+            "Theme": theme,
+            "Collection": collection,
             "Data Team": datateam,
             "Data Product Owner": product_owner,
-            "Data Steward": "",
-            "Language": "Nederlands",
-            "Confidentiality": "Confidential",
-            "BIO Quickscan": "Done",
-            "Privacy": "Niet persoonlijk identificeerbaar",
-            "Privacy Quickscan": "Done",
-            "Geo Data": "",
-            "History Start": "",
-            "Refresh Rate": "",
-            "End Date": "",
+            "Data Steward": data_steward,
+            "Language": language,
+            "Confidentiality": confidentiality,
+            "BIO Quickscan": bio_quickscan,
+            "Privacy": privacy,
+            "Privacy Quickscan": privacy_quickscan,
+            "Geo Data": geo_data,
+            "History Start": history_start,
+            "Refresh Rate": refresh_rate,
+            "End Date": end_date,
             "Schema": {"Tables": tables}
         }
 
         json_data_contract = json.dumps(data_contract, indent=2)
 
         if write_to_landingzone:
-            output_path = f"/Volumes/{self.catalog}/default/landingzone/datacontracten/{self.dataset}.json"
+            if output_path is None:
+                output_path = f'/Volumes/{self.catalog}/default/landingzone/datacontracten/{self.dataset}.json'
+
             try:
                 with open(output_path, "w") as file:
                     file.write(json_data_contract)
@@ -314,5 +351,4 @@ class Dataset:
 #     catalog=CATALOG,
 #     schema=SCHEMA,
 #     dataset=DATASET,
-#     excluded_table_names=['amis_test']
 # )
