@@ -14,7 +14,5 @@ class TestDataset(unittest.TestCase):
         self.dataset.get_information_schema.return_value = MagicMock()
         self.assertIsNotNone(self.dataset.get_information_schema())
 
-    # Add more test methods here for other methods in the Dataset class
-
 if __name__ == '__main__':
     unittest.main()
