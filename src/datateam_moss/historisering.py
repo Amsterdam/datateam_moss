@@ -271,7 +271,13 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
 
     # Controleer of de opgegeven identifier uniek is
     controle_unieke_waarden_kolom(df=df, kolom=business_key)
-    
+
+    # Check if the column contains any non-null values
+    not_null_count = df.filter(col(business_key).isNotNull()).count()   
+
+    if not_null_count == 0:
+        ValueError(f"The column '{business_key}' is filled with only null values.")
+        
     if ontbrekende_kolommen:      
         # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
         huidige_datum_tz = tijdzone_amsterdam()
