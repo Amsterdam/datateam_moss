@@ -272,8 +272,7 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
     all_null_count = df.filter(df[business_key].isNull()).count()
 
     if all_null_count == df.count():
-        ValueError(f"The column '{business_key}' is filled with only null values.")
-        sys.exit(1)
+        sys.exit(f"The column '{business_key}' is filled with only null values.")
         
     if ontbrekende_kolommen:      
         # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
