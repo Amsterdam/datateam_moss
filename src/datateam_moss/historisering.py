@@ -231,10 +231,6 @@ def maak_onbekende_dimensie(df, naam_id, naam_nieuw_df, naam_bk, uitzonderings_k
                 nieuwe_data.append(datum_tijd)
 
         nieuwe_rij = Row(*nieuwe_data)
-        print("handmatige debug")
-        print(nieuwe_data)
-        print(nieuwe_rij)
-        print(df.columns)
         schema = StructType([StructField(col, df.schema[col].dataType, True) for col in df.columns])
         df_na_gevuld = vul_lege_cellen_in(df=df, uitzonderings_kolommen=uitzonderings_kolommen)
 
@@ -271,7 +267,13 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
 
     # Controleer of de opgegeven identifier uniek is
     controle_unieke_waarden_kolom(df=df, kolom=business_key)
-    
+
+    # Check if the column contains any non-null values
+    not_null_count = df.filter(col(business_key).isNotNull()).count()   
+
+    if not_null_count == 0:
+        ValueError(f"The column '{business_key}' is filled with only null values.")
+        
     if ontbrekende_kolommen:      
         # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
         huidige_datum_tz = tijdzone_amsterdam()
