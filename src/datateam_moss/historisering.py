@@ -231,6 +231,10 @@ def maak_onbekende_dimensie(df, naam_id, naam_nieuw_df, naam_bk, uitzonderings_k
                 nieuwe_data.append(datum_tijd)
 
         nieuwe_rij = Row(*nieuwe_data)
+        print("handmatige debug")
+        print(nieuwe_data)
+        print(nieuwe_rij)
+        print(df.columns)
         schema = StructType([StructField(col, df.schema[col].dataType, True) for col in df.columns])
         df_na_gevuld = vul_lege_cellen_in(df=df, uitzonderings_kolommen=uitzonderings_kolommen)
 
