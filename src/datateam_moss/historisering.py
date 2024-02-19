@@ -18,7 +18,7 @@ from pyspark.sql.window import Window
 def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, pk: str):
     """
     Neemt de naam van een kolom als invoer aan, veronderstelt dat het een gehashte waarde bevat,
-    voegt aan elke waarde een willekeurig woord of getal toe en maakt een nieuwe hash.
+    voegt aan elke waarde een willekeurig woord of getal toe en maakt een nieuwe hash..
 
     Parameters:
     - df: DataFrame: Het DataFrame waar je de hash aan wil toevoegen
