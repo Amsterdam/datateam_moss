@@ -273,6 +273,7 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
 
     if all_null_count == df.count():
         ValueError(f"The column '{business_key}' is filled with only null values.")
+        sys.exit(1)
         
     if ontbrekende_kolommen:      
         # Roep de functie tijdzone_amsterdam aan om de correcte tijdsindeling te krijgen
@@ -284,7 +285,7 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
                         .withColumn("mtd_geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss")) 
                         .withColumn("mtd_record_actief", lit(True)) 
                         .withColumn("mtd_actie", lit("inserted"))
-                        .withColumn(naam_bk, column(business_key)))
+                        .withColumn(naam_bk, column(business_key).cast("string")))
         
         temp_df = voeg_willekeurig_toe_en_hash_toe(df=temp_df, business_key=business_key, pk=naam_id)
         
@@ -393,7 +394,7 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, schema_catalog: str, business
         # voeg dataframes weer samen en pas historiseringskolommen aan
         df_nieuwe_tabel_samengevoegd = (df_toegevoegd.union(df_opnieuw_ingevoegd).union(df_verandert)
                                         .withColumn(naam_id, lit(None))
-                                        .withColumn(naam_bk, col(business_key))
+                                        .withColumn(naam_bk, col(business_key).cast("string"))
                                         .withColumn("mtd_record_actief", lit(True))
                                         .withColumn("mtd_geldig_van", huidige_datum_tz)
                                         .withColumn("mtd_geldig_tot", to_timestamp(lit("9999-12-31 23:59:59"), "yyyy-MM-dd HH:mm:ss"))
