@@ -213,6 +213,8 @@ def maak_onbekende_dimensie(df, naam_id, naam_nieuw_df, naam_bk, uitzonderings_k
                 nieuwe_data.append("0")
             elif col == naam_id:
                 nieuwe_data.append(0)
+            elif isinstance(col_type, DoubleType):
+                nieuwe_data.append(0.00)
             elif isinstance(col_type, IntegerType) or isinstance(col_type, LongType):
                 nieuwe_data.append(0)
             elif col == "mtd_record_actief":
