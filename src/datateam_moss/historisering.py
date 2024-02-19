@@ -268,10 +268,10 @@ def initialiseer_historisering(df: DataFrame, schema_catalog: str, business_key:
     # Controleer of de opgegeven identifier uniek is
     controle_unieke_waarden_kolom(df=df, kolom=business_key)
 
-    # Check if the column contains any non-null values
-    not_null_count = df.filter(col(business_key).isNotNull()).count()   
+    # Check if the column contains only null values
+    all_null_count = df.filter(df[business_key].isNull()).count()
 
-    if not_null_count == 0:
+    if all_null_count == df.count():
         ValueError(f"The column '{business_key}' is filled with only null values.")
         
     if ontbrekende_kolommen:      
