@@ -333,7 +333,7 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, schema_catalog: str, business
 
     # Bepaal de juiste volgorde van de kolommen
     volgorde_kolommen_gewenst = [business_key, naam_id, "mtd_record_actief",  "mtd_geldig_van", "mtd_geldig_tot", "mtd_actie"]
-    df_na_gevuld = vul_lege_cellen_in(df=huidig_dwh_tabel, uitzonderings_kolommen=uitzonderings_kolommen)
+    df_na_gevuld = vul_lege_cellen_in(df=nieuw_df, uitzonderings_kolommen=uitzonderings_kolommen)
     _, volgorde_kolommen = bepaal_kolom_volgorde(df = df_na_gevuld, gewenste_kolom_volgorde = volgorde_kolommen_gewenst)
 
     # Roep de functie bepaal_veranderde_records aan om de records te krijgen van rijen die veranderd zijn
