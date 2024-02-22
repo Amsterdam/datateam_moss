@@ -1,10 +1,20 @@
+# Databricks notebook source
 import re
+from datetime import datetime
+
 from databricks.sdk.runtime import *
+from pyspark.sql import DataFrame, Row, SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
-from datetime import datetime
-from pyspark.sql import SparkSession, Row, DataFrame
 from pyspark.sql.window import Window
+
+
+def get_catalog():
+    """
+    Get the catalog for the current workspace.
+    """
+    return dbutils.secrets.get(scope='keyvault', key='catalog')
+
 
 def clean_column_names(cols):
     """
@@ -32,17 +42,4 @@ def clean_column_names(cols):
     UNWANTED_CHARS = r"[ ,;{}:()\n\t=\.\-/'?\*]"
     cleaned_cols = [re.sub(UNWANTED_CHARS, '_', col.lower()).replace('___', '_').replace('__', '_').strip('_').strip() for col in cols]
     return cleaned_cols
-
-
-def rename_multiple_columns(df: DataFrame, renamings: dict):
-    """
-    Renames multiple columns in a PySpark DataFrame.
-
-    Args:
-        df (pyspark.sql.DataFrame): The input DataFrame.
-        renamings (dict): A dictionary containing the column name mappings.
-
-    Returns:
-        pyspark.sql.DataFrame: The DataFrame with renamed columns.
-    """
-    return df.toDF(*list(map(lambda x: renamings.get(x, x), df.columns)))
+    

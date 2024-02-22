@@ -339,6 +339,146 @@ class Dataset:
             print(self.get_table_stats(table_name).to_markdown())
             print()
 
+    def _map_types_refdb(self, type):
+        """
+        Maps the types of the columns to the types in the refdb according to amsterdam-schema "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema".
+        
+        Args:
+            type (str): The type of the column.
+
+        Returns:
+            str: The mapped type of the column.
+        """
+        return {
+            'date': 'date',
+            'string': 'string',
+            'int': 'number',
+            'double': 'number',
+            'float': 'number',
+            'long': 'number',
+        }.get(type, 'string')
+
+    def create_refdb_schema(
+            self,
+            type: str = '',
+            description: str = '',
+            license: str = '',
+            status: str = '',
+            owner: str = '',
+            auth: str = '',
+            authorization_grantor: str = '',
+            creator: str = '',
+            publisher: str = '',
+            theme: list = [],
+            keywords: list = [],
+            crs: str = '',
+            write_to_landingzone: bool = False,
+            output_path: str = None
+        ) -> str:
+        """
+        Creates a refdb schema for the dataset.
+
+        Args:
+            type (str, optional): The type of the dataset. Defaults to ''.
+            title (str, optional): The title of the dataset. Defaults to ''.
+            description (str, optional): The description of the dataset. Defaults to ''.
+            license (str, optional): The license of the dataset. Defaults to ''.
+            status (str, optional): The status of the dataset. Defaults to ''.
+            owner (str, optional): The owner of the dataset. Defaults to ''.
+            auth (str, optional): The auth of the dataset. Defaults to ''.
+            authorization_grantor (str, optional): The authorization grantor of the dataset. Defaults to ''.
+            creator (str, optional): The creator of the dataset. Defaults to ''.
+            publisher (str, optional): The publisher of the dataset. Defaults to ''.
+            theme (list, optional): The theme of the dataset. Defaults to [].
+            keywords (list, optional): The keywords of the dataset. Defaults to [].
+            crs (str, optional): The crs of the dataset. Defaults to ''.
+            output_path (str, optional): The path to write the refdb schema to. Defaults to f'/Volumes/{self.catalog}/default/landingzone/refdb/{self.dataset}.json'.
+
+        Returns:
+            str: The JSON representation of the refdb schema.
+        """
+
+        table_base = {
+            "id": "",
+            "title": "",
+            "type": "table",
+            "version": "1.0.0",
+            "schema": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "additionalProperties": False,
+                "required": [
+                    "schema",
+                    "id"
+                ],
+                "display": "",
+                "properties": {
+                    "schema": {
+                        "$ref": "https://schemas.data.amsterdam.nl/schema@v1.1.1#/definitions/schema"
+                    },
+                    "id": {
+                        "type": "integer",
+                        "description": "Unieke aanduiding van de ."
+                    },
+                    "geometry": {
+                        "$ref": "https://geojson.org/schema/Point.json",
+                        "description": "Puntgeometrie van de ."
+                    },
+                }
+            }
+        }
+
+        # easier with pandas
+        pandas_df = self.information_schema.toPandas()
+
+        tables = []
+        for table_name, group in pandas_df.groupby('table_name'):
+            table = table_base.copy()
+            table['id'] = table_name
+            table['title'] = table_name
+            table['schema']['properties'] = {row['column_name']: {
+                "type": self._map_types_refdb(row['full_data_type']),
+                "description": row.get('comment', f"Description of {row['column_name']}"),
+                "term": row.get('tag_value', row['column_name'])
+            } for row in group.to_dict('records')}
+            tables.append(table)
+
+        refdb_schema = {
+            "type": type,
+            "id": "",
+            "title": self.dataset,
+            "description": description,
+            "license": license,
+            "status": status,
+            "owner": owner,
+            "auth": auth,
+            "authorizationGrantor": authorization_grantor,
+            "creator": creator,
+            "publisher": publisher,
+            "theme": theme,
+            "keywords": keywords,
+            "crs": crs,
+            "tables": tables
+        }
+
+        json_refdb_schema = json.dumps(refdb_schema, indent=2)
+
+        if write_to_landingzone:
+            if output_path is None:
+                output_path = f'/Volumes/{self.catalog}/default/landingzone/refdb/{self.dataset}.json'  
+            try:
+                with open(output_path, "w") as file:
+                    file.write(json_refdb_schema)
+            except Exception as e:
+                print(f"Error writing refdb schema to {output_path}: {e}")
+                print('Vergeet niet om de folder refdb aan te maken in de landingzone')
+            else:
+                print(f"Refdb schema written to {output_path}")
+
+
+        return json_refdb_schema
+
+
 # COMMAND ----------
 
 # # Example usage 
