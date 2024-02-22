@@ -129,7 +129,6 @@ def bepaal_kolom_volgorde(df: DataFrame, gewenste_kolom_volgorde: list) -> DataF
         if column not in gewenste_kolom_volgorde:
             column = column.lower()
             gewenste_kolom_volgorde.append(column)
-
     output_df = df.select(*gewenste_kolom_volgorde)
     return output_df, gewenste_kolom_volgorde
 
@@ -232,11 +231,11 @@ def maak_onbekende_dimensie(df, naam_id, naam_nieuw_df, naam_bk, uitzonderings_k
 
         nieuwe_rij = Row(*nieuwe_data)
         schema = StructType([StructField(col, df.schema[col].dataType, True) for col in df.columns])
-        df_na_gevuld = vul_lege_cellen_in(df=df, uitzonderings_kolommen=uitzonderings_kolommen)
 
         # Bepaal het schema o.b.v. het dataframe
         onbekende_dimensie = spark.createDataFrame([nieuwe_rij], schema)  # Maak een nieuwe rij
-        df_met_onbekende_dimensie = onbekende_dimensie.union(df)
+        df_na_gevuld = vul_lege_cellen_in(df=output_volgorde, uitzonderings_kolommen=uitzonderings_kolommen)
+        df_met_onbekende_dimensie = onbekende_dimensie.union(df_na_gevuld)
         return df_met_onbekende_dimensie
 
     else:
@@ -333,8 +332,13 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, schema_catalog: str, business
 
     # Bepaal de juiste volgorde van de kolommen
     volgorde_kolommen_gewenst = [business_key, naam_id, "mtd_record_actief",  "mtd_geldig_van", "mtd_geldig_tot", "mtd_actie"]
-    df_na_gevuld = vul_lege_cellen_in(df=huidig_dwh_tabel, uitzonderings_kolommen=uitzonderings_kolommen)
-    _, volgorde_kolommen = bepaal_kolom_volgorde(df = df_na_gevuld, gewenste_kolom_volgorde = volgorde_kolommen_gewenst)
+    
+    # vul lege waardes in als het een dimensie tabel betreft
+    if "_d_" in naam_nieuw_df:
+        nieuw_df = vul_lege_cellen_in(df=nieuw_df, uitzonderings_kolommen=uitzonderings_kolommen) 
+
+    # Bepaal de volgorde van de kolommen
+    _, volgorde_kolommen = bepaal_kolom_volgorde(df = huidig_dwh_tabel, gewenste_kolom_volgorde = volgorde_kolommen_gewenst)
 
     # Roep de functie bepaal_veranderde_records aan om de records te krijgen van rijen die veranderd zijn
     unieke_df_id_verandert, unieke_df_id_verwijdert, unieke_df_id_opnieuw_ingevoegd, unieke_df_id_toegevoegd = bepaal_veranderde_records(huidig_df=huidig_dwh_tabel, nieuw_df=nieuw_df, business_key=business_key, naam_bk=naam_bk, naam_id=naam_id, uitzonderings_kolommen=uitzonderings_kolommen) 
@@ -343,12 +347,11 @@ def updaten_historisering_dwh(nieuw_df: DataFrame, schema_catalog: str, business
     if all(df.isEmpty() for df in [unieke_df_id_verandert, unieke_df_id_verwijdert, unieke_df_id_opnieuw_ingevoegd, unieke_df_id_toegevoegd]):
         # Sla de gegevens op in delta-formaat in het opgegeven schema
         print(f"Er zijn geen wijzigingen constateert in vergelijking met de vorige versie. De tabel wordt nu opgeslagen in {schema_catalog_print} onder de naam: {naam_nieuw_df}")
-        huidig_dwh_tabel.write.saveAsTable(f'{schema_catalog}.{naam_nieuw_df}', mode='overwrite', overwriteSchema=overwrite_schema) # is langzaam (single node)  
         return
     
     else:
         print("Er zijn wel wijzigingen constateert in vergelijking met de vorige versie.")
-
+        sys.exit()
         # Voeg alle losse dataframes samen om later te broadcasten
         df_bk_samengevoegd_1 = (unieke_df_id_verwijdert.union(unieke_df_id_verandert))
         df_bk_samengevoegd_2 = (unieke_df_id_verandert.union(unieke_df_id_opnieuw_ingevoegd).union(unieke_df_id_toegevoegd))
