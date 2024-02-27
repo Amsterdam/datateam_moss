@@ -21,6 +21,9 @@ def clean_column_names(cols):
     Clean and standardize column names by converting to lowercase, replacing unwanted characters with underscores,
     collapsing consecutive underscores, and removing leading/trailing whitespaces and underscores.
 
+    Otherwise, spark will throw this error on Unity Catalog:
+        `Found invalid character(s) among ' ,;{}()\n\t=' in the column names of your schema.`
+
     Args:
         cols (list): List of column names to be cleaned.
 
@@ -42,4 +45,21 @@ def clean_column_names(cols):
     UNWANTED_CHARS = r"[ ,;{}:()\n\t=\.\-/'?\*]"
     cleaned_cols = [re.sub(UNWANTED_CHARS, '_', col.lower()).replace('___', '_').replace('__', '_').strip('_').strip() for col in cols]
     return cleaned_cols
+    
+
+def clean_dataframe(df: DataFrame):
+    """
+    Clean and standardize dataframe column names by converting to lowercase, replacing unwanted characters with underscores,
+    collapsing consecutive underscores, and removing leading/trailing whitespaces and underscores.
+
+    Otherwise, spark will throw this error on Unity Catalog:
+        `Found invalid character(s) among ' ,;{}()\n\t=' in the column names of your schema.`
+
+    Args:
+        df (pyspark.sql.DataFrame): DataFrame to be cleaned.
+
+    Returns:
+        pyspark.sql.DataFrame: Cleaned DataFrame.
+    """
+    return df.toDF(*clean_column_names(df.columns))
     
