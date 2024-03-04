@@ -46,6 +46,7 @@ def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: 
     resultaat_df = (df.withColumn(naam_id, udf_voeg_willekeurig_toe_en_hash_toe(col(business_key))))
     return resultaat_df
 
+
 def maak_onbekende_dimensie(df, naam_bk, naam_id, uitzonderings_kolommen=[]):
     """
     Maakt een nieuwe DataFrame met een record voor ontbrekende waarden in een dimensietabel.
@@ -92,6 +93,7 @@ def maak_onbekende_dimensie(df, naam_bk, naam_id, uitzonderings_kolommen=[]):
     onbekende_dimensie = spark.createDataFrame([nieuwe_rij], schema)  # Maak een nieuwe rij
     df_met_onbekende_dimensie = onbekende_dimensie.union(df)
     return df_met_onbekende_dimensie
+
 
 def vul_lege_cellen_in(df: DataFrame, uitzonderings_kolommen: list = []):
     """
