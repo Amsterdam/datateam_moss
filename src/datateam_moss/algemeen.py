@@ -104,7 +104,7 @@ def del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: st
     if verwijder_check == "ja":
         for table in set_tabellen_catalog_filter:
             spark.sql(f"DROP TABLE {catalog}.{schema}.{table}")
-            print("De opgegeven tabellen zijn correct verwijderd.") 
+        print("De opgegeven tabellen zijn correct verwijderd.") 
     return
 
 def check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str):
