@@ -105,6 +105,36 @@ def del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: st
         for table in set_tabellen_catalog_filter:
             spark.sql(f"DROP TABLE {catalog}.{schema}.{table}")
             print("De opgegeven tabellen zijn correct verwijderd.") 
-
     return
+
+def check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str):
+    """
+    Controleert of het aantal rijen overeenkomt met het aantal unieke ID's in de opgegeven kolom.
+
+    Args:
+        tabelnaam (str): Naam van de tabel.
+        id (str): Naam van de kolom die de unieke ID's bevat.
+
+    Raises:
+        ValueError: Als het aantal unieke ID's niet overeenkomt met het totale aantal rijen in de tabel.
+
+    Returns:
+        None
+    """
     
+    # Lees de tabel in
+    check_tabel = spark.read.table(tabelnaam)
+    
+    # Bereken het aantal unieke ID's
+    distinct_count = check_tabel.select(id).distinct().count()
+    
+    # Bereken het totale aantal rijen
+    total_count = check_tabel.count()
+
+    # Controleer of het aantal unieke ID's overeenkomt met het totale aantal rijen
+    if distinct_count == total_count:
+        print("Check succes: Het aantal rijen komt overeen met het aantal unieke ID's")
+    else:
+        raise ValueError("Check gefaald: Het aantal rijen komt NIET overeen met het aantal unieke ID's")
+    
+    return
