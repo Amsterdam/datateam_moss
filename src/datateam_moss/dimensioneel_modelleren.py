@@ -1,4 +1,22 @@
 # Databricks notebook source
+
+# Import algemene packagaes
+import sys
+import time
+import uuid
+import hashlib
+import xxhash
+import random
+import string
+
+# Import packages voor pyspark
+from databricks.sdk.runtime import *
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+from datetime import datetime
+from pyspark.sql import SparkSession, Row, DataFrame
+from pyspark.sql.window import Window
+
 def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: str):
     """
     Neemt de naam van een kolom als invoer aan, veronderstelt dat het een gehashte waarde bevat,
