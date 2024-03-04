@@ -1,3 +1,4 @@
+# Databricks notebook source
 def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: str):
     """
     Neemt de naam van een kolom als invoer aan, veronderstelt dat het een gehashte waarde bevat,
