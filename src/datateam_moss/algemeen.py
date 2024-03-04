@@ -138,3 +138,77 @@ def check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str):
         raise ValueError("Check gefaald: Het aantal rijen komt NIET overeen met het aantal unieke ID's")
     
     return
+
+def controle_unieke_waarden_kolom(df: DataFrame, kolom: str):
+    """
+    Controleert of alle waarden in een specifieke kolom uniek zijn in het gegeven DataFrame.
+
+    Parameters:
+    - df: DataFrame: Het DataFrame waarin de controle wordt uitgevoerd.
+    - kolom: str: De naam van de kolom waarvan de unieke waarden worden gecontroleerd.
+
+    Returns:
+    - None
+
+    Error:
+    - ValueError: Als het aantal unieke waarden in de kolom niet gelijk is aan het totale aantal rijen,
+                   wordt er een melding geprint dat niet alle waarden in de kolom uniek zijn.
+    
+    Laatste update: 10-01-2023
+    """
+    window_spec = Window().partitionBy(kolom)
+    df_with_counts = (
+        df.join(broadcast(df.dropDuplicates([kolom])), kolom, "inner")
+        .select(kolom, count(kolom).over(window_spec).alias("count"))
+        .filter(col("count") > 1)
+        .distinct()
+    )
+    
+    # If-statement om te controleren of er dubbele business_keys zijn
+    if (df_with_counts.isEmpty()):
+        print(f"Er zijn geen dubbele waarden gedetecteerd in de opgegeven kolom ({kolom}) van de tabel.")  
+    else:
+        raise ValueError(f"Niet alle waarden in de kolom '{kolom}' zijn uniek.")
+    return
+
+
+def tijdzone_amsterdam():
+    """
+    Pakt de huidige tijd en convert het naar het volgende tijdsformat yyyy-MM-dd HH:mm:ss en Amsterdamse tijdzone
+    Laatste update: 04-12-2023
+    """
+    # Bepaal de datum van de wijziging
+    huidige_datum = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Zet de string om naar een tijdstempel
+    timestamp_expr = to_timestamp(lit(huidige_datum), "yyyy-MM-dd HH:mm:ss")
+
+    # Stel de tijdzone in op "Europe/Amsterdam"
+    huidige_datum_tz = from_utc_timestamp(timestamp_expr, "Europe/Amsterdam")
+
+    return huidige_datum_tz
+
+
+def bepaal_kolom_volgorde(df: DataFrame, gewenste_kolom_volgorde: list) -> DataFrame: 
+    """
+    Bepaalt de volgorde van kolommen in een DataFrame op basis van de opgegeven gewenste volgorde.
+
+    Parameters:
+    - df (DataFrame): Het invoer DataFrame waarvan de kolomvolgorde moet worden aangepast.
+    - gewenste_kolom_volgorde (list): Een lijst met kolomnamen in de gewenste volgorde.
+
+    Returns:
+    - DataFrame: Een nieuw DataFrame met kolommen in de gespecificeerde volgorde.
+    Laatste update: 22-02-2023
+    """
+    # Maak een kopie van de gewenste kolomvolgorde
+    temp = gewenste_kolom_volgorde.copy()
+
+    # Bepaal de juiste volgorde van de kolommen
+    df_kolommen = df.columns
+    for column in df_kolommen:
+        if column not in temp:
+            temp.append(column.lower())
+
+    output_df = df.select(*temp)
+    return output_df, temp.copy()  # Return the modified DataFrame and a copy of the modified column order
