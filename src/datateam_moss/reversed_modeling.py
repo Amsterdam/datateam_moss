@@ -66,7 +66,7 @@ class Dataset:
                     "left_outer")
             .filter(
                 (col("columns.table_schema") == self.schema) & 
-                col("columns.table_name").like(f"%{self.dataset}_%") & 
+                col("columns.table_name").like(f"%{self.dataset}%") & 
                 ~col("columns.table_name").isin(self.excluded_table_names)
             )
 
