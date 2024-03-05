@@ -254,8 +254,8 @@ class Dataset:
         for c, tables in self.occurrences.items():
             if len(tables) > 1:
                 for table1, table2 in combinations(tables, 2):
-                    df1 = self.spark.table(table1).select(c)
-                    df2 = self.spark.table(table2).select(c)
+                    df1 = self.spark.table(f'{self.catalog}.{self.schema}.{table1}').select(c)
+                    df2 = self.spark.table(f'{self.catalog}.{self.schema}.{table2}').select(c)
 
                     if df1.distinct().count() == df1.count() and df2.distinct().count() == df2.count():
                         relation_type = '-'
@@ -481,14 +481,14 @@ class Dataset:
 
 # COMMAND ----------
 
-# # Example usage 
-# CATALOG = 'dpms_dev'
-# SCHEMA = 'gold'
-# DATASET = 'amis'
+# Example usage 
+CATALOG = 'dpms_dev'
+SCHEMA = 'gold'
+DATASET = 'amis'
 
-# dataset = Dataset(
-#     spark_session=spark,
-#     catalog=CATALOG,
-#     schema=SCHEMA,
-#     dataset=DATASET,
-# )
+dataset = Dataset(
+    spark_session=spark,
+    catalog=CATALOG,
+    schema=SCHEMA,
+    dataset=DATASET,
+)
