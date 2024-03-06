@@ -301,6 +301,8 @@ class Dataset:
             for c in schema:
                 print(c)
             print()
+
+            
     def get_table_stats(self, table_name):
         """
         Retrieves the table statistics for a given table.
@@ -311,8 +313,8 @@ class Dataset:
         Returns:
             pandas.DataFrame: The table statistics.
         """
-        # return self.spark.table(table_name).toPandas().describe()
-        df = self.spark.table(table_name).toPandas()
+        # return self.spark.table(f'{self.catalog}.{self.schema}.{table_name}').toPandas().describe()
+        df = self.spark.table(f'{self.catalog}.{self.schema}.{table_name}').toPandas()
         return pd.concat([
             df.nunique().rename('count_distinct'),
             (df.nunique() / len(df)).rename('pct_distinct'),
@@ -320,24 +322,37 @@ class Dataset:
         ], axis=1)
 
 
-    def print_stats(self, table_name=None):
+    def print_stats(self, format='md', sep=',', table_name=None):
         """
-        Prints out the table statistics for all tables in the dataset or one provided.
+        Prints out the table statistics for all tables in the dataset or for a specific table.
 
         Args:
-            table_name (str, optional): The name of the table. Defaults to None.
+            format (str, optional): The format in which to print the table statistics. 
+                Valid options are 'md' for markdown and 'csv' for CSV. Defaults to 'md'.
+            sep (str, optional): The separator to use when printing the table statistics in CSV format. 
+                Defaults to ','.
+            table_name (str, optional): The name of the table for which to print the statistics. 
+                If not provided, statistics for all tables will be printed. Defaults to None.
 
-        Only prints the table statistics in markdown.
+        Prints the table statistics in the specified format. If no table name is provided, 
+        statistics for all tables in the dataset will be printed.
         """
         if table_name == None:
             for table_name in self.tables_dict.keys():
                 print(table_name)
-                print(self.get_table_stats(table_name).to_markdown())
+                if format == 'csv':
+                    print(self.get_table_stats(table_name).to_csv(sep=sep))
+                else:
+                    print(self.get_table_stats(table_name).to_markdown())
                 print()
         else:
             print(table_name)
-            print(self.get_table_stats(table_name).to_markdown())
+            if format == 'csv':
+                print(self.get_table_stats(table_name).to_csv(sep=sep))
+            else:
+                print(self.get_table_stats(table_name)).to_markdown()
             print()
+    
 
     def _map_types_refdb(self, type):
         """
@@ -481,14 +496,14 @@ class Dataset:
 
 # COMMAND ----------
 
-# Example usage 
-CATALOG = 'dpms_dev'
-SCHEMA = 'gold'
-DATASET = 'amis'
+# # Example usage 
+# CATALOG = 'dpms_dev'
+# SCHEMA = 'gold'
+# DATASET = 'amis'
 
-dataset = Dataset(
-    spark_session=spark,
-    catalog=CATALOG,
-    schema=SCHEMA,
-    dataset=DATASET,
-)
+# dataset = Dataset(
+#     spark_session=spark,
+#     catalog=CATALOG,
+#     schema=SCHEMA,
+#     dataset=DATASET,
+# )
