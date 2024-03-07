@@ -350,7 +350,7 @@ class Dataset:
             if format == 'csv':
                 print(self.get_table_stats(table_name).to_csv(sep=sep))
             else:
-                print(self.get_table_stats(table_name)).to_markdown()
+                print(self.get_table_stats(table_name).to_markdown())
             print()
     
 
@@ -498,6 +498,7 @@ class Dataset:
 
 # # Example usage 
 # CATALOG = 'dpms_dev'
+# SCHEMA = 'silver'
 # SCHEMA = 'gold'
 # DATASET = 'amis'
 
