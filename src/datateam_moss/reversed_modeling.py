@@ -499,6 +499,7 @@ class Dataset:
 # # Example usage 
 # CATALOG = 'dpms_dev'
 # SCHEMA = 'silver'
+# SCHEMA = 'gold'
 # DATASET = 'amis'
 
 # dataset = Dataset(
