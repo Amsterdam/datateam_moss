@@ -1,5 +1,6 @@
 # Databricks notebook source
 import re
+import pytz
 from datetime import datetime
 
 from databricks.sdk.runtime import *
@@ -172,21 +173,63 @@ def controle_unieke_waarden_kolom(df: DataFrame, kolom: str):
     return
 
 
-def tijdzone_amsterdam():
+def convert_datetime_format(input_format):
     """
-    Pakt de huidige tijd en convert het naar het volgende tijdsformat yyyy-MM-dd HH:mm:ss en Amsterdamse tijdzone
-    Laatste update: 04-12-2023
+    Converteert het opmaakoptie voor datum en tijd van het datetime (format)  naar het PySpark format.
+    
+    Args:
+        input_format (str): De invoeropmaakoptie voor datum en tijd.
+    
+    Returns:
+        str: De geconverteerde opmaakoptie voor datum en tijd.
     """
-    # Bepaal de datum van de wijziging
-    huidige_datum = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Mapt de formatting van de package: datetime -> PySpark formatting
+    format_mapping = {
+        "%Y": "yyyy",
+        "%m": "MM",
+        "%d": "dd",
+        "%H": "HH",
+        "%M": "mm",
+        "%S": "ss"
+    }
 
-    # Zet de string om naar een tijdstempel
-    timestamp_expr = to_timestamp(lit(huidige_datum), "yyyy-MM-dd HH:mm:ss")
+    # Vervang opmaaktekens in de opgegeven string
+    for char, replacement in format_mapping.items():
+        input_format = input_format.replace(char, replacement)
+    
+    return(input_format)
 
-    # Stel de tijdzone in op "Europe/Amsterdam"
-    huidige_datum_tz = from_utc_timestamp(timestamp_expr, "Europe/Amsterdam")
 
-    return huidige_datum_tz
+def tijdzone_amsterdam(tijdformaat="%Y-%m-%d %H:%M:%S", return_type="string"):
+    """Haalt de huidige tijd op en converteert deze naar het opgegeven tijdsformaat en de tijdzone van Amsterdam.
+
+    Args:
+        tijdformaat (str, optioneel): De opmaakstring voor het gewenste tijdsformaat. Standaard ingesteld op "%Y-%m-%d %H:%M:%S".
+        return_type (str, optioneel): Het type waarde dat moet worden geretourneerd. Mogelijke waarden zijn "string" om de tijd als
+                                       een string terug te geven of een andere waarde om de tijd als een tijdstempel terug te geven. 
+                                       Standaard ingesteld op "string".
+
+    Returns:
+        str of Timestamp: De huidige tijd in het opgegeven formaat en de tijdzone van Amsterdam.
+    """
+    # Converteer datetime opmaak naar PySpark opmaak
+    converted_format = convert_datetime_format(tijdformaat)
+
+    # Haal de huidige tijd op
+    amsterdam_tz = pytz.timezone('Europe/Amsterdam')
+    huidige_datum = datetime.now(amsterdam_tz).strftime(tijdformaat)
+    
+    # Als return_type 'string' is, geef de tijd als string terug
+    if return_type == "string":
+        return huidige_datum
+    # Als het gaat om jaar, maand of dag aanduiding -> dan dataformat
+    elif any(char in ['Y', 'm', 'd'] for char in tijdformaat) and any(char not in ['H', 'M', 'S'] for char in tijdformaat):
+        timestamp_expr = to_date(lit(huidige_datum), converted_format)
+        return timestamp_expr
+    else:
+    # anders timestamp format
+        timestamp_expr = to_timestamp(lit(huidige_datum), converted_format)
+        return timestamp_expr
 
 
 def bepaal_kolom_volgorde(df: DataFrame, gewenste_kolom_volgorde: list) -> DataFrame: 
