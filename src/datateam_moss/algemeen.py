@@ -202,7 +202,7 @@ def convert_datetime_format(input_format):
 
 def tijdzone_amsterdam(tijdformaat="%Y-%m-%d %H:%M:%S", return_type="string"):
     """Haalt de huidige tijd op en converteert deze naar het opgegeven tijdsformaat en de tijdzone van Amsterdam.
-
+       Kijk op https://www.w3schools.com/python/python_datetime.asp voor de formatting
     Args:
         tijdformaat (str, optioneel): De opmaakstring voor het gewenste tijdsformaat. Standaard ingesteld op "%Y-%m-%d %H:%M:%S".
         return_type (str, optioneel): Het type waarde dat moet worden geretourneerd. Mogelijke waarden zijn "string" om de tijd als
@@ -218,17 +218,17 @@ def tijdzone_amsterdam(tijdformaat="%Y-%m-%d %H:%M:%S", return_type="string"):
     # Haal de huidige tijd op
     amsterdam_tz = pytz.timezone('Europe/Amsterdam')
     huidige_datum = datetime.now(amsterdam_tz).strftime(tijdformaat)
-    
+
     # Als return_type 'string' is, geef de tijd als string terug
     if return_type == "string":
         return huidige_datum
+    
     # Als het gaat om jaar, maand of dag aanduiding -> dan dataformat
-    elif any(char in ['Y', 'm', 'd'] for char in tijdformaat) and any(char not in ['H', 'M', 'S'] for char in tijdformaat):
-        timestamp_expr = to_date(lit(huidige_datum), converted_format)
+    elif any(char in ['Y', 'm', 'd'] for char in tijdformaat) and any(char in ['H', 'M', 'S'] for char in tijdformaat):
+        timestamp_expr = to_timestamp(lit(huidige_datum), converted_format)
         return timestamp_expr
     else:
-    # anders timestamp format
-        timestamp_expr = to_timestamp(lit(huidige_datum), converted_format)
+        timestamp_expr = to_date(lit(huidige_datum), converted_format)
         return timestamp_expr
 
 
