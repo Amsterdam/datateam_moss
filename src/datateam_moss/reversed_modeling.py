@@ -6,6 +6,7 @@ from collections import defaultdict
 import pandas as pd
 from databricks.sdk.runtime import *
 from pyspark.sql.functions import col
+import builtins as bltns
 
 
 class Dataset:
@@ -493,6 +494,45 @@ class Dataset:
 
         return json_refdb_schema
 
+    def analyseer_bron(dataset):
+        #maak dataframe aan in Pandas om metadata en metrics per kolom op te slaan
+        df = pd.DataFrame(columns=["Tabelnaam","Kolomnaam","Datatype","Percentage Niet Null","Percentage uniek","Eerste 3 waarden"])
+        information_schema = dataset.information_schema
+        #itereer over relevante selectie van information_schema
+        for row in information_schema.select("table_name","column_name","full_data_type").collect():
+            t = row.table_name
+            c = row.column_name
+            d = row.full_data_type
+            #maak sql query
+            #let op: dit retourneert een heel df met 1 waarde, die access je met first()[0]
+            count_star = spark.sql(f'SELECT COUNT(*) FROM {dataset.catalog}.{dataset.schema}.{t}').first()[0]
+            count_distinct = spark.sql(f'SELECT COUNT(DISTINCT({c})) FROM {dataset.catalog}.{dataset.schema}.{t}').first()[0]
+            count = spark.sql(f'SELECT COUNT({c}) FROM {dataset.catalog}.{dataset.schema}.{t}').first()[0]
+            #probeer een sample op te halen: haal 3 unieke waarden op en groupby + concat voor 1 cel > zie onderstaande cel
+            #maak metrics
+            try:
+                pct_not_null = bltns.round((count/count_star)*100,2)
+            except ZeroDivisionError:
+                pct_not_null = 0
+            try:
+                pct_distinct = bltns.round((count_distinct/count)*100,2)
+            except ZeroDivisionError:
+                pct_distinct = 0
+            #haal een sample van de eerste 3 waarden
+            sample = ', '.join([row[0] for row in spark.sql(f'SELECT DISTINCT({c}) FROM {dataset.catalog}.{dataset.schema}.{t} WHERE {c} IS NOT NULL LIMIT 3').collect()])
+            #voeg alle data als lijst toe aan df
+            values = [t,c,d,pct_not_null,pct_distinct,sample]
+            df.loc[len(df)] = values
+        return df
+
+    def print_bronanalyse(format='md'):
+        if format not in ['md', 'csv']:
+            raise Exception('Ondersteunde formats: csv, md')
+        df = analyseer_bron(dataset)
+        if format == 'csv':
+            print(df.to_csv(header=True,sep=';'))
+        else:
+            print(df.to_markdown())    
 
 # COMMAND ----------
 
