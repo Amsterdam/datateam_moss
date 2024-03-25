@@ -526,13 +526,13 @@ class Dataset:
         return df
 
     def print_bronanalyse(format='md'):
-    if format not in ['md', 'csv']:
-        raise Exception('Ondersteunde formats: csv, md')
-    df = analyseer_bron(dataset)
-    if format == 'csv':
-        print(df.to_csv(header=True,sep=';'))
-    else:
-        print(df.to_markdown())    
+        if format not in ['md', 'csv']:
+            raise Exception('Ondersteunde formats: csv, md')
+        df = analyseer_bron(dataset)
+        if format == 'csv':
+            print(df.to_csv(header=True,sep=';'))
+        else:
+            print(df.to_markdown())    
 
 # COMMAND ----------
 
