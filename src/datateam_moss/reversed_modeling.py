@@ -525,7 +525,7 @@ class Dataset:
             df.loc[len(df)] = values
         return df
 
-    def print_bronanalyse(format='md'):
+    def print_bronanalyse(format):
         if format not in ['md', 'csv']:
             raise Exception('Ondersteunde formats: csv, md')
         df = analyseer_bron(dataset)
