@@ -6,7 +6,7 @@ from collections import defaultdict
 import pandas as pd
 from databricks.sdk.runtime import *
 from pyspark.sql.functions import col
-from builtins import round
+import builtins as bltns
 
 
 class Dataset:
@@ -511,11 +511,11 @@ class Dataset:
             #probeer een sample op te halen: haal 3 unieke waarden op en groupby + concat voor 1 cel > zie onderstaande cel
             #maak metrics
             try:
-                pct_not_null = round((count/count_star)*100,2)
+                pct_not_null = bltns.round((count/count_star)*100,2)
             except ZeroDivisionError:
                 pct_not_null = 0
             try:
-                pct_distinct = round((count_distinct/count)*100,2)
+                pct_distinct = bltns.round((count_distinct/count)*100,2)
             except ZeroDivisionError:
                 pct_distinct = 0
             #haal een sample van de eerste 3 waarden
