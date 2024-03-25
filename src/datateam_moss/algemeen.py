@@ -200,15 +200,12 @@ def convert_datetime_format(input_format):
     return(input_format)
 
 
-def tijdzone_amsterdam(tijdformaat="%Y-%m-%d %H:%M:%S", return_type="string", date_or_timestamp="timestamp"):
+def tijdzone_amsterdam(tijdformaat="%Y-%m-%d %H:%M:%S", date_string_timestamp="timestamp"):
     """Haalt de huidige tijd op en converteert deze naar het opgegeven tijdsformaat en de tijdzone van Amsterdam.
        Kijk op https://www.w3schools.com/python/python_datetime.asp voor de formatting
     Args:
         tijdformaat (str, optioneel): De opmaakstring voor het gewenste tijdsformaat. Standaard ingesteld op "%Y-%m-%d %H:%M:%S".
-        return_type (str, optioneel): Het type waarde dat moet worden geretourneerd. Mogelijke waarden zijn "string" om de tijd als
-                                       een string terug te geven of een andere waarde om de tijd als een tijdstempel terug te geven. 
-                                       Standaard ingesteld op "string".
-        date_or_timestamp (str, optioneel) = Hier kn je aangeven of je het terug wil als een "timestamp" of "date" format.
+        date_string_timestamp (str, optioneel) = Hier kn je aangeven of je het terug wil als een "timestamp" (PySpark-kolom) of "date" (Pyspark-kolom) of "string" format.
 
     Returns:
         str of Timestamp: De huidige tijd in het opgegeven formaat en de tijdzone van Amsterdam.
@@ -221,15 +218,15 @@ def tijdzone_amsterdam(tijdformaat="%Y-%m-%d %H:%M:%S", return_type="string", da
     huidige_datum = datetime.now(amsterdam_tz).strftime(tijdformaat)
 
     # Als return_type 'string' is, geef de tijd als string terug
-    if return_type == "string":
+    if date_string_timestamp == "string":
         return huidige_datum
     
     # Als het gaat om jaar, maand of dag aanduiding -> dan dataformat
-    elif date_or_timestamp == "timestamp":
+    elif date_string_timestamp == "timestamp":
         timestamp_expr = to_timestamp(lit(huidige_datum), converted_format)
         return timestamp_expr
         
-    elif date_or_timestamp == "date":
+    elif date_string_timestamp == "date":
         timestamp_expr = to_date(lit(huidige_datum), converted_format)
         return timestamp_expr
 
