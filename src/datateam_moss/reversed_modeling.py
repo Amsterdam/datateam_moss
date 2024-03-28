@@ -293,14 +293,26 @@ class Dataset:
                 print(f"{c1} {r_type} {c2}")
             
 
-    def print_drawio_code(self):
+    def print_drawio_code(self, use_id_as_pk=True):
         """
         Prints out the code for creating a Draw.io diagram for the dataset.
+
+        Args:
+            use_id_as_pk (bool, optional): Whether to consider columns named "id" as primary keys. Defaults to True.
         """
         for table_name, schema in self.tables_dict.items():
             print('CREATE TABLE', table_name)
-            for c in schema:
-                print(c)
+            columns = []
+            pk_column = None
+            for col_name, col_type in schema:
+                if use_id_as_pk and col_name.lower() == 'id':
+                    pk_column = f"{col_name} PRIMARY KEY"
+                else:
+                    columns.append(f"    {col_name}, {col_type}")
+            if pk_column:
+                columns.insert(0, pk_column)
+            columns_str = '\n'.join(columns)
+            print(f"(\n{columns_str}\n)")
             print()
 
             
@@ -539,7 +551,7 @@ class Dataset:
 # # Example usage 
 # CATALOG = 'dpms_dev'
 # SCHEMA = 'silver'
-# SCHEMA = 'gold'
+# # SCHEMA = 'gold'
 # DATASET = 'amis'
 
 # dataset = Dataset(
