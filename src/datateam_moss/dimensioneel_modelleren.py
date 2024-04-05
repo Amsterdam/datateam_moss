@@ -65,7 +65,7 @@ def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: 
     return resultaat_df
 
 
-def maak_onbekende_dimensie(df, naam_bk, naam_id, uitzonderings_kolommen=[]):
+def maak_onbekende_dimensie(df, naam_bk, naam_id="", uitzonderings_kolommen=[]):
     """
     Maakt een nieuwe DataFrame met een record voor ontbrekende waarden in een dimensietabel.
 
