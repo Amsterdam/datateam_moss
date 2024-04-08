@@ -195,7 +195,7 @@ class Dataset:
 
         if write_to_landingzone:
             if output_path is None:
-                output_path = f'/Volumes/{self.catalog}/default/landingzone/datacontracten/{self.dataset}.json'
+                output_path = f'/Volumes/{self.catalog}/default/landingzone/datacontracten/{name_df}.json'
 
             try:
                 with open(output_path, "w") as file:
