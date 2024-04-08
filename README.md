@@ -33,8 +33,8 @@ controle_unieke_waarden_kolom(df: DataFrame, kolom: str) #Controleert of alle wa
 convert_datetime_format(input_format): # Converteert het opmaakoptie voor datum en tijd van het datetime (format)  naar het PySpark format.
 tijdzone_amsterdam(tijdformaat="%Y-%m-%d %H:%M:%S", date_string_timestamp="timestamp"): #Haalt de huidige tijd op en converteert deze naar het opgegeven tijdsformaat en de tijdzone van Amsterdam.
 bepaal_kolom_volgorde(df: DataFrame, gewenste_kolom_volgorde: list) -> DataFrame: #Bepaalt de volgorde van kolommen in een DataFrame op basis van de opgegeven gewenste volgorde.
- voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: str) # Neemt de naam van een kolom als invoer aan, veronderstelt dat het een gehashte waarde bevat,
-    voegt aan elke waarde een willekeurig woord of getal toe en maakt een nieuwe hash..
+voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: str) # Neemt de naam van een kolom als invoer aan, veronderstelt dat het een gehashte waarde bevat,
+voegt aan elke waarde een willekeurig woord of getal toe en maakt een nieuwe hash..
 maak_onbekende_dimensie(df, naam_bk, naam_id="", uitzonderings_kolommen=[]) # Maakt een nieuwe DataFrame met een record voor ontbrekende waarden in een dimensietabel.
 vul_lege_cellen_in(df: DataFrame, uitzonderings_kolommen: list = []) #Vult lege cellen in een DataFrame in met standaardwaarden, behalve voor de opgegeven uitzonderingskolommen.
 
