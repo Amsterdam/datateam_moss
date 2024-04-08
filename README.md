@@ -20,11 +20,24 @@ Binnen het cluster Digitalisering, Innovatie en Informatie (DII) zit verschillen
 - 3.2 -> Reversed modeling voor logische modellen
  
 ## 3.1 Algemene functies
-Op dit moment zijn er 2 functies beschikbaar:
+Op dit moment zijn er  verschillende functies beschikbaar.
 
 ```python
-clean_colum_names(df.columns) # deze functies schoont kolomnamen op
+get_catalog()
+clean_colum_names(df.columns) # schoont kolomnamen op
+clean_dataframe(df: DataFrame) # schoont een dataframe op
+del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: str, uitsluiten_tabellen:str = None) # verwijder meerdere tabellen uit de catalogus.
 rename_multiple_columns(df, {'oude_naam': 'nieuwe_naam', 'oude_naam_2': 'nieuwe_naam_2'}) # deze hernoemt meerdere kolommen
+check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str) # Controleert of het aantal rijen overeenkomt met het aantal unieke ID's in de opgegeven kolom.
+controle_unieke_waarden_kolom(df: DataFrame, kolom: str) #Controleert of alle waarden in een specifieke kolom uniek zijn in het gegeven DataFrame.
+convert_datetime_format(input_format): # Converteert het opmaakoptie voor datum en tijd van het datetime (format)  naar het PySpark format.
+tijdzone_amsterdam(tijdformaat="%Y-%m-%d %H:%M:%S", date_string_timestamp="timestamp"): #Haalt de huidige tijd op en converteert deze naar het opgegeven tijdsformaat en de tijdzone van Amsterdam.
+bepaal_kolom_volgorde(df: DataFrame, gewenste_kolom_volgorde: list) -> DataFrame: #Bepaalt de volgorde van kolommen in een DataFrame op basis van de opgegeven gewenste volgorde.
+ voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: str) # Neemt de naam van een kolom als invoer aan, veronderstelt dat het een gehashte waarde bevat,
+    voegt aan elke waarde een willekeurig woord of getal toe en maakt een nieuwe hash..
+maak_onbekende_dimensie(df, naam_bk, naam_id="", uitzonderings_kolommen=[]) # Maakt een nieuwe DataFrame met een record voor ontbrekende waarden in een dimensietabel.
+vul_lege_cellen_in(df: DataFrame, uitzonderings_kolommen: list = []) #Vult lege cellen in een DataFrame in met standaardwaarden, behalve voor de opgegeven uitzonderingskolommen.
+
 ```      
 
 ## 3.2 Reversed modeling voor logische modellen
