@@ -102,6 +102,7 @@ class Dataset:
 
     def create_datacontract(
         self,
+        name_df: str = "Naam dataset/project"
         version: str = 'v0',
         description: str = f'Description of the dataset',
         business_goal: str = 'Business goal of the dataset',
@@ -169,7 +170,7 @@ class Dataset:
         ]
 
         data_contract = {
-            "Name": self.dataset,
+            "Name": name_df,
             "Version": version,
             "Description": description,
             "Business goal": business_goal,
