@@ -2,6 +2,7 @@
 import re
 import pytz
 from datetime import datetime
+import pandas as pd
 
 from databricks.sdk.runtime import *
 from pyspark.sql import DataFrame, Row, SparkSession
