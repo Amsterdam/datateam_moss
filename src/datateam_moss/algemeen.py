@@ -184,7 +184,7 @@ def controle_unieke_waarden_kolom(df: DataFrame, kolom: str):
         raise ValueError(f"Niet alle waarden in de kolom '{kolom}' zijn uniek.")
     return
 
-def schrijf_naar_metatabel(script: str, tabel: str, controle: str, controle_waarde: str, meta_tabel: str):
+def schrijf_naar_metatabel(table_catalog:str, table_schema:str, table_naam:str, script: str, controle: str, controle_waarde: str, meta_tabel: str):
     """
     Schrijft gegevens naar de meta-tabel in de opgegeven catalogus en schematabel.
 
@@ -203,26 +203,38 @@ def schrijf_naar_metatabel(script: str, tabel: str, controle: str, controle_waar
     Returns:
         None
     """    
+    try: 
     # Laad de meta-tabel in
-    meta_tabel_df = spark.read.table(f"{CATALOG}.algemeen.{meta_tabel}")
+        meta_tabel_df = spark.read.table(f"{table_catalog}.algemeen.{meta_tabel}")
 
-    # Definieer het schema & data
-    data = [(script, tabel, controle, controle_waarde)]
-    schema = ["script", "tabel", "controle", "controle_waarde"]
+        # Definieer het schema & data
+        data = [(table_catalog, table_schema, table_naam, script, controle, controle_waarde)]
+        schema = ["table_catalog", "table_schema", "table_name", "script", "controle", "controle_waarde"]
 
-    # Creëer een tijdelijke DataFrame met de nieuwe gegevens
-    temp_tabel = spark.createDataFrame(data, schema)
+        # Creëer een tijdelijke DataFrame met de nieuwe gegevens
+        temp_tabel = spark.createDataFrame(data, schema)
 
-    # Voeg de tijdelijke DataFrame samen met de bestaande meta-tabel
-    union_df = meta_tabel_df.union(temp_tabel)
+        # Voeg de tijdelijke DataFrame samen met de bestaande meta-tabel
+        union_df = meta_tabel_df.union(temp_tabel)
 
-    # Vervang lege strings door None en verwijder volledig lege rijen
-    updated_df = (union_df
-                  .select([when(col(c) == "", None).otherwise(col(c)).alias(c) for c in union_df.columns])
-                  .na.drop(how="all").distinct())
+        # Vervang lege strings door None en verwijder volledig lege rijen
+        updated_df = (union_df
+                    .select([when(col(c) == "", None).otherwise(col(c)).alias(c) for c in union_df.columns])
+                    .na.drop(how="all").distinct())
 
-    # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
-    updated_df.write.saveAsTable(f"{CATALOG}.algemeen.{meta_tabel}", mode="overwrite")
+        # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
+        updated_df.write.saveAsTable(f"{table_catalog}.algemeen.{meta_tabel}", mode="overwrite")
+    
+    except:
+        # Definieer het schema & data
+        data = [(table_catalog, table_schema, table_naam, script, controle, controle_waarde)]
+        schema = ["table_catalog", "table_schema", "table_name", "script", "controle", "controle_waarde"]
+
+        # Creëer een tijdelijke DataFrame met de nieuwe gegevens
+        temp_tabel = spark.createDataFrame(data, schema)
+
+        # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
+        temp_tabel.write.saveAsTable(f"{table_catalog}.algemeen.{meta_tabel}", mode="overwrite")
     return
 
 def convert_datetime_format(input_format):
