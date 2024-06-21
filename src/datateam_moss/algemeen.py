@@ -64,14 +64,14 @@ def clean_dataframe(df: DataFrame):
     """
     return df.toDF(*clean_column_names(df.columns))
 
-def del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: str, uitsluiten_tabellen:str = None):
+def del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: str, uitsluiten_tabellen: str = None):
     """
     Verwijder meerdere tabellen uit de catalogus.
 
     Args:
         catalog (str): Naam van de catalogus.
         schema (str): Naam van het schema.
-        tabellen_filter (str): Filter voor tabellen die moeten worden verwijderd.
+        tabellen_filter (str): Filter voor tabellen die moeten worden verwijderd: "alles" of "prefix in tabelnaam"
         uitsluiten_tabellen (str, optional): Tabellen om uit te sluiten van verwijdering. Standaard is None.
 
     Raises:
@@ -80,32 +80,44 @@ def del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: st
     Returns:
         None
     """
-    
+
     # Combineer catalogus en schema
-    schema_catalog = catalog + "." + schema
+    schema_catalog = f"{catalog}.{schema}"
     
     # Haal metadata op uit de Unity Catalog
     tabellen_catalog = spark.sql(f"SHOW TABLES IN {schema_catalog}")
 
     # Maak een set van alle tabellen in het opgegeven schema
     set_tabellen_catalog = {row["tableName"] for row in tabellen_catalog.collect()}
-    set_tabellen_catalog_filter = {row for row in set_tabellen_catalog if tabellen_filter in row}
+
+    # Filter de tabellen op basis van de gegeven filter
+    if tabellen_filter == "alles":
+        set_tabellen_catalog_filter = set_tabellen_catalog
+    else:
+        set_tabellen_catalog_filter = {table for table in set_tabellen_catalog if tabellen_filter in table}
+
+    # Verwijder de tabellen die in uitsluiten_tabellen staan, als deze parameter is meegegeven
+    if uitsluiten_tabellen:
+        uitsluiten_set = set(uitsluiten_tabellen.split(","))
+        set_tabellen_catalog_filter = set_tabellen_catalog_filter - uitsluiten_set
 
     # Controleer of er tabellen zijn die voldoen aan het opgegeven filter
-    if len(set_tabellen_catalog_filter) == 0:
-        raise ValueError("Er bestaan geen tabellen met opgegeven tabellen_filter. Vul de parameter uitsluiten_tabellen aan of geef een ander filter op.")
+    if not set_tabellen_catalog_filter:
+        raise ValueError("Er bestaan geen tabellen met het opgegeven tabellen_filter. Vul de parameter uitsluiten_tabellen aan of geef een ander filter op.")
     
     # Print de geselecteerde tabellen
-    print(set_tabellen_catalog_filter)
+    print("Geselecteerde tabellen voor verwijdering:", set_tabellen_catalog_filter)
     
     # Vraag om bevestiging voor verwijdering van de tabellen
-    verwijder_check = input("Je staat op het punt om deze tabellen te verwijderen uit de CATALOG. Typ 'ja' om de tabellen te verwijderen.")
+    verwijder_check = input("Je staat op het punt om deze tabellen te verwijderen uit de CATALOG. Typ 'ja' om de tabellen te verwijderen -> ")
     
     # Verwijder de geselecteerde tabellen indien bevestigd
-    if verwijder_check == "ja":
+    if verwijder_check.lower() == "ja":
         for table in set_tabellen_catalog_filter:
-            spark.sql(f"DROP TABLE {catalog}.{schema}.{table}")
+            spark.sql(f"DROP TABLE {schema_catalog}.{table}")
         print("De opgegeven tabellen zijn correct verwijderd.") 
+    else:
+        print("Verwijdering geannuleerd.")
     return
 
 def check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str):
