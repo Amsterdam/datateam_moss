@@ -184,6 +184,46 @@ def controle_unieke_waarden_kolom(df: DataFrame, kolom: str):
         raise ValueError(f"Niet alle waarden in de kolom '{kolom}' zijn uniek.")
     return
 
+def schrijf_naar_metatabel(script: str, tabel: str, controle: str, controle_waarde: str, meta_tabel: str):
+    """
+    Schrijft gegevens naar de meta-tabel in de opgegeven catalogus en schematabel.
+
+    Laadt de bestaande meta-tabel in, voegt nieuwe gegevens toe, vervangt lege strings door None,
+    verwijdert rijen die volledig leeg zijn en schrijft de bijgewerkte gegevens terug naar de meta-tabel.
+
+    !! Let op !! Als je eerste keer deze functie gebruikt moet je even lege waardes meegeven.
+    
+    Args:
+        script (str): De naam van het script.
+        tabel (str): De naam van de tabel.
+        controle (str): De controle informatie.
+        controle_waarde (str): De waarde van de controle.
+        meta_tabel (str): De naam van de meta-tabel waar gegevens worden opgeslagen.
+
+    Returns:
+        None
+    """    
+    # Laad de meta-tabel in
+    meta_tabel_df = spark.read.table(f"{CATALOG}.algemeen.{meta_tabel}")
+
+    # Definieer het schema & data
+    data = [(script, tabel, controle, controle_waarde)]
+    schema = ["script", "tabel", "controle", "controle_waarde"]
+
+    # Creëer een tijdelijke DataFrame met de nieuwe gegevens
+    temp_tabel = spark.createDataFrame(data, schema)
+
+    # Voeg de tijdelijke DataFrame samen met de bestaande meta-tabel
+    union_df = meta_tabel_df.union(temp_tabel)
+
+    # Vervang lege strings door None en verwijder volledig lege rijen
+    updated_df = (union_df
+                  .select([when(col(c) == "", None).otherwise(col(c)).alias(c) for c in union_df.columns])
+                  .na.drop(how="all").distinct())
+
+    # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
+    updated_df.write.saveAsTable(f"{CATALOG}.algemeen.{meta_tabel}", mode="overwrite")
+    return
 
 def convert_datetime_format(input_format):
     """
