@@ -7,10 +7,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "datateam_moss"
-version = "0.0.74"
+version = "0.0.75"
 authors = [
   { name="Robbin Breeuwer", email="r.j.breeuwer@amsterdam.nl" },
-  { name="Fried Schölvinck", email="f.scholvinck@amsterdam.nl"},
   { name="Koen Hallmann", email="k.hallmann@amsterdam.nl"}
 ]
 description = "Functions needed for datateam MOSS (municipality of Amsterdam)"
