@@ -206,7 +206,7 @@ def schrijf_naar_metatabel(table_catalog:str, table_schema:str, table_naam:str, 
     """    
     try: 
     # Laad de meta-tabel in
-        meta_tabel_df = spark.read.table(f"{table_catalog}.algemeen.{meta_tabel}")
+        meta_tabel_df = spark.read.table(f"{table_catalog}.{table_schema}.{meta_tabel}")
 
         # Definieer het schema & data
         data = [(table_catalog, table_schema, table_naam, script, controle, controle_waarde)]
@@ -224,7 +224,7 @@ def schrijf_naar_metatabel(table_catalog:str, table_schema:str, table_naam:str, 
                     .na.drop(how="all").distinct())
 
         # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
-        updated_df.write.saveAsTable(f"{table_catalog}.algemeen.{meta_tabel}", mode="overwrite")
+        updated_df.write.saveAsTable(f"{table_catalog}.{table_schema}.{meta_tabel}", mode="overwrite")
     
     except:
         # Definieer het schema & data
@@ -235,7 +235,7 @@ def schrijf_naar_metatabel(table_catalog:str, table_schema:str, table_naam:str, 
         temp_tabel = spark.createDataFrame(data, schema)
 
         # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
-        temp_tabel.write.saveAsTable(f"{table_catalog}.algemeen.{meta_tabel}", mode="overwrite")
+        temp_tabel.write.saveAsTable(f"{table_catalog}.{table_schema}.{meta_tabel}", mode="overwrite")
     return
 
 def convert_datetime_format(input_format):
