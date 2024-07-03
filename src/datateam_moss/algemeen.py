@@ -185,35 +185,36 @@ def controle_unieke_waarden_kolom(df: DataFrame, kolom: str):
         raise ValueError(f"Niet alle waarden in de kolom '{kolom}' zijn uniek.")
     return
 
-def schrijf_naar_metatabel(table_catalog:str, table_schema:str, table_naam:str, script: str, controle: str, controle_waarde: str, meta_tabel: str):
+def schrijf_naar_metatabel(catalogus:str, meta_schema:str, tabel_schema:str, tabel_naam:str, script_naam: str, controle: str, controle_waarde: str, meta_tabel_naam: str):
     """
-    Schrijft gegevens naar de meta-tabel in de opgegeven catalogus en schematabel.
+    Schrijft gegevens naar de meta-tabel in de opgegeven catalogus en schema.
 
     Laadt de bestaande meta-tabel in, voegt nieuwe gegevens toe, vervangt lege strings door None,
     verwijdert rijen die volledig leeg zijn en schrijft de bijgewerkte gegevens terug naar de meta-tabel.
-
-    !! Let op !! Als je eerste keer deze functie gebruikt moet je even lege waardes meegeven.
     
     Args:
-        script (str): De naam van het script.
-        tabel (str): De naam van de tabel.
-        controle (str): De controle informatie.
+        catalogus (str): De naam van de catalogus waarin de meta-tabel zich bevindt.
+        meta_schema (str): De naam van het schema (Catalog) waarin de meta-tabel zich bevindt.
+        tabel_schema (str): De naam van het schema van de tabel waarvoor de gegevens worden toegevoegd.
+        tabel_naam (str): De naam van de tabel waarvoor de gegevens worden toegevoegd.
+        script_naam (str): De naam van het script dat de gegevens toevoegt.
+        controle (str): Informatie over de controle.
         controle_waarde (str): De waarde van de controle.
-        meta_tabel (str): De naam van de meta-tabel waar gegevens worden opgeslagen.
+        meta_tabel_naam (str): De naam van de meta-tabel waar gegevens worden opgeslagen.
 
     Returns:
         None
     """    
     try: 
-    # Laad de meta-tabel in
-        meta_tabel_df = spark.read.table(f"{table_catalog}.{table_schema}.{meta_tabel}")
+        # Laad de meta-tabel in
+        meta_tabel_df = spark.read.table(f"{catalogus}.{meta_schema}.{meta_tabel_naam}")
 
         # Definieer het schema & data
-        data = [(table_catalog, table_schema, table_naam, script, controle, controle_waarde)]
-        schema = ["table_catalog", "table_schema", "table_name", "script", "controle", "controle_waarde"]
+        data = [(catalogus, tabel_schema, tabel_naam, script_naam, controle, controle_waarde)]
+        kolommen = ["table_catalog", "table_schema", "table_name", "script", "controle", "controle_waarde"]
 
         # Creëer een tijdelijke DataFrame met de nieuwe gegevens
-        temp_tabel = spark.createDataFrame(data, schema)
+        temp_tabel = spark.createDataFrame(data, kolommen)
 
         # Voeg de tijdelijke DataFrame samen met de bestaande meta-tabel
         union_df = meta_tabel_df.union(temp_tabel)
@@ -224,18 +225,18 @@ def schrijf_naar_metatabel(table_catalog:str, table_schema:str, table_naam:str, 
                     .na.drop(how="all").distinct())
 
         # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
-        updated_df.write.saveAsTable(f"{table_catalog}.{table_schema}.{meta_tabel}", mode="overwrite")
+        updated_df.write.saveAsTable(f"{catalogus}.{meta_schema}.{meta_tabel_naam}", mode="overwrite")
     
     except:
         # Definieer het schema & data
-        data = [(table_catalog, table_schema, table_naam, script, controle, controle_waarde)]
-        schema = ["table_catalog", "table_schema", "table_name", "script", "controle", "controle_waarde"]
+        data = [(catalogus, tabel_schema, tabel_naam, script_naam, controle, controle_waarde)]
+        kolommen = ["table_catalog", "table_schema", "table_name", "script", "controle", "controle_waarde"]
 
         # Creëer een tijdelijke DataFrame met de nieuwe gegevens
-        temp_tabel = spark.createDataFrame(data, schema)
+        temp_tabel = spark.createDataFrame(data, kolommen)
 
         # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
-        temp_tabel.write.saveAsTable(f"{table_catalog}.{table_schema}.{meta_tabel}", mode="overwrite")
+        temp_tabel.write.saveAsTable(f"{catalogus}.{meta_schema}.{meta_tabel_naam}", mode="overwrite")
     return
 
 def convert_datetime_format(input_format):
