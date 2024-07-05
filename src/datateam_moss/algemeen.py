@@ -10,6 +10,37 @@ from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from pyspark.sql.window import Window
 
+def sla_tabel_op_catalog(df: DataFrame, catalog: str, schema: str, tabel_naam: str, operatie: str, keuze: str):
+    """
+    Sla een DataFrame op als een tabel in een Databricks catalogus met specifieke opties.
+
+    Parameters:
+    df (DataFrame): De DataFrame die moet worden opgeslagen.
+    catalog (str): De catalogus waarin de tabel moet worden opgeslagen.
+    schema (str): Het schema waarin de tabel moet worden opgeslagen.
+    tabel_naam (str): De naam van de tabel die moet worden opgeslagen.
+    operatie (str): De operatie die moet worden uitgevoerd ('mergeSchema' of 'overwriteSchema').
+    keuze (str): De keuze voor de operatie ('true' of 'false').
+
+    Returns:
+    None
+    """
+    if operatie not in ["mergeSchema", "overwriteSchema"]:
+        raise ValueError("Ongeldige operatie. Kies uit 'mergeSchema' of 'overwriteSchema'.")
+    
+    if keuze not in ["true", "false"]:
+        raise ValueError("Ongeldige keuze. Kies uit 'true' of 'false'.")
+
+    options = {operatie: keuze}
+
+    if operatie == "mergeSchema" and keuze == "true":
+        df.write.option("mergeSchema", "true").mode("overwrite").saveAsTable(f"{catalog}.{schema}.{tabel_naam}")
+    elif operatie == "mergeSchema" and keuze == "false":
+        df.write.option("mergeSchema", "false").mode("overwrite").saveAsTable(f"{catalog}.{schema}.{tabel_naam}")
+    elif operatie == "overwriteSchema" and keuze == "true":
+        df.write.option("overwriteSchema", "true").mode("overwrite").saveAsTable(f"{catalog}.{schema}.{tabel_naam}")
+    elif operatie == "overwriteSchema" and keuze == "false":
+        df.write.option("overwriteSchema", "false").mode("overwrite").saveAsTable(f"{catalog}.{schema}.{tabel_naam}")
 
 def get_catalog():
     """
