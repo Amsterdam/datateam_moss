@@ -27,7 +27,7 @@ def bronanalyse(catalog: str, schemas: list, trefwoorden_kolomnamen: list, count
                      
     #filter information_schema tot relevante kolomnamen
     kolomnamen = '|'.join(trefwoorden_kolomnamen)
-    df = df.where(df['table_name'].contains(kolomnamen))
+    df = df.where(df['column_name'].contains(kolomnamen))
 
     #naar pandas
     df = df.toPandas()
