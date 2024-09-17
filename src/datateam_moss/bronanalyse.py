@@ -1,3 +1,6 @@
+# Databricks notebook source
+
+# Inladen packages
 import pandas as pd
 
 def bronanalyse(catalog: str, schemas: list, trefwoorden_kolomnamen: list, counts = False, waarden = False):
