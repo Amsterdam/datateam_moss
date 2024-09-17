@@ -18,6 +18,12 @@ def bronanalyse(catalog: str, schemas: list, trefwoorden_kolomnamen: list, count
         pd.Dataframe: een dataframe met tabel- en kolomnamen en bijbehorende counts en waarden.
     """
 
+    # Initialize Spark session if not already done
+    if 'spark' not in globals():
+        spark = (SparkSession.builder
+            .appName("Bronanalyse")
+            .getOrCreate())
+    
     #selectie van kolommen uit information_schema die we gebruiken voor bronanalyse
     kolommen_df = ['table_catalog','table_schema','table_name','column_name','data_type']
 
