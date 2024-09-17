@@ -1,8 +1,12 @@
 # Databricks notebook source
 
+# Import necessary Databricks runtime objects
+from databricks.sdk.runtime import *
+from pyspark.sql import DataFrame, SparkSession
+
 import pandas as pd
 
-def bronanalyse(catalog: str, schemas: list, trefwoorden_kolomnamen: list, counts = False, waarden = False):
+def bronanalyse(spark:SparkSession,catalog: str, schemas: list, trefwoorden_kolomnamen: list, counts = False, waarden = False):
     """
     Labelt de rijen van een DataFrame op basis van categorieën en matchende strings.
 
@@ -16,7 +20,7 @@ def bronanalyse(catalog: str, schemas: list, trefwoorden_kolomnamen: list, count
     Returns:
         pd.Dataframe: een dataframe met tabel- en kolomnamen en bijbehorende counts en waarden.
     """
-
+    
     #selectie van kolommen uit information_schema die we gebruiken voor bronanalyse
     kolommen_df = ['table_catalog','table_schema','table_name','column_name','data_type']
 
