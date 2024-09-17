@@ -3,6 +3,7 @@
 # Import necessary Databricks runtime objects
 from databricks.sdk.runtime import *
 from pyspark.sql import DataFrame, SparkSession
+
 import pandas as pd
 
 def bronanalyse(spark: SparkSession, catalog: str, schemas: list, trefwoorden_kolomnamen: list, counts = False, waarden = False):
