@@ -5,7 +5,7 @@ from databricks.sdk.runtime import *
 from pyspark.sql import DataFrame, SparkSession
 import pandas as pd
 
-def bronanalyse(spark:SparkSession,catalog: str, schemas: list, trefwoorden_kolomnamen: list, counts = False, waarden = False):
+def bronanalyse(spark: SparkSession, catalog: str, schemas: list, trefwoorden_kolomnamen: list, counts = False, waarden = False):
     """
     Labelt de rijen van een DataFrame op basis van categorieën en matchende strings.
 
