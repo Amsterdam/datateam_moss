@@ -94,7 +94,7 @@ def maak_onbekende_dimensie(df, naam_bk, naam_id="", uitzonderings_kolommen=[]):
         elif isinstance(col_type, IntegerType) or isinstance(col_type, LongType):
             nieuwe_data.append(0)
         elif isinstance(col_type, StringType):
-            nieuwe_data.append(f'{col} heeft geen waarde')
+            nieuwe_data.append(f'N/A')
         elif isinstance(col_type, BooleanType):
             nieuwe_data.append(None)
         elif isinstance(col_type, TimestampType):
