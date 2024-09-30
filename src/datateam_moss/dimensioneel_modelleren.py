@@ -131,7 +131,7 @@ def vul_lege_cellen_in(df: DataFrame, uitzonderings_kolommen: list = []):
         elif isinstance(col_type, IntegerType) or isinstance(col_type, LongType):
             df = (df.withColumn(col_name, when(column(col_name).isNull(), lit(0)).otherwise(column(col_name))))
         elif isinstance(col_type, StringType):
-            df = (df.withColumn(col_name, when(column(col_name).isNull(), lit(f'{col_name} heeft geen waarde')).otherwise(column(col_name))))
+            df = (df.withColumn(col_name, when(column(col_name).isNull(), lit('N/A')).otherwise(column(col_name))))
         elif isinstance(col_type, BooleanType):
             df = (df.withColumn(col_name, when(column(col_name).isNull(), lit(None)).otherwise(column(col_name))))
         elif isinstance(col_type, TimestampType):
