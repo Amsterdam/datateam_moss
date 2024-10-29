@@ -351,3 +351,34 @@ def bepaal_kolom_volgorde(df: DataFrame, gewenste_kolom_volgorde: list) -> DataF
 
     output_df = df.select(*temp)
     return output_df, temp.copy()  # Return the modified DataFrame and a copy of the modified column order
+
+def vind_scheidingsteken(bestandspad, scheidingstekens=[',', ';', '\t', '|']):
+    """
+    Probeert het juiste scheidingsteken (delimiter) te vinden voor een CSV-bestand door verschillende mogelijke scheidingstekens te testen.
+
+    Deze functie leest het CSV-bestand met elk gegeven scheidingsteken en controleert of het resulterende DataFrame
+    meer dan één kolom bevat. Indien ja, wordt aangenomen dat het gevonden scheidingsteken correct is.
+
+    Args:
+        bestandspad (str): Het pad naar het CSV-bestand.
+        scheidingstekens (list): Lijst van mogelijke scheidingstekens om te testen. Standaard zijn dit: [',', ';', '\t', '|'].
+
+    Returns:
+        tuple: Het gevonden scheidingsteken en de kolommen in het DataFrame.
+        Indien geen geldig scheidingsteken wordt gevonden, retourneert de functie (None, None).
+    """
+    
+    for scheidingsteken in scheidingstekens:
+        try:
+            # Probeer het CSV-bestand te lezen met het huidige scheidingsteken
+            df = spark.read.csv(bestandspad, sep=scheidingsteken, header=True)
+            
+            # Als het DataFrame meer dan één kolom bevat, aannemen dat dit het correcte scheidingsteken is
+            if len(df.columns) > 1:
+                return scheidingsteken, df.columns
+        except Exception as e:
+            # Als er een fout optreedt bij het lezen van het bestand, probeer het volgende scheidingsteken
+            continue
+
+    # Als geen enkel scheidingsteken werkt, return None
+    return None, None
