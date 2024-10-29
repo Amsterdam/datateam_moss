@@ -103,6 +103,8 @@ def maak_onbekende_dimensie(df, naam_bk, naam_id="", uitzonderings_kolommen=[]):
         elif isinstance(col_type, DateType):
             datum_tijd = datetime.strptime("9999-12-31", "%Y-%m-%d").date()
             nieuwe_data.append(datum_tijd)
+        elif isinstance(col_type, NullType):
+            nieuwe_data.append('N/A') 
 
     nieuwe_rij = Row(*nieuwe_data)
     schema = StructType([StructField(col, df.schema[col].dataType, True) for col in df.columns])
