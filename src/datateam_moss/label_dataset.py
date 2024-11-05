@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import re
 
-def label(categorie: str, kolommen: pd.DataFrame, strings: list) -> pd.Series:
+def label(categorie: str, kolommen: pd.DataFrame, strings: list, strings_not = []) -> pd.Series:
     """
     Labelt de rijen van een DataFrame op basis van categorieën en matchende strings.
 
@@ -12,6 +12,7 @@ def label(categorie: str, kolommen: pd.DataFrame, strings: list) -> pd.Series:
         categorie (str): De naam van de categorie om toe te passen op de matches.
         kolommen (pd.DataFrame): De DataFrame-kolommen die doorzocht moeten worden.
         strings (list): Een lijst van strings die gematcht moeten worden binnen de kolommen.
+        strings_not (list): Een list die, indien hij elementen bevat, gebruikt wordt als NOT om geen categorisatie toe te passen bij een match
 
     Returns:
         pd.Series: Een Pandas Series met de categorieën toegewezen aan de juiste rijen.
@@ -33,8 +34,15 @@ def label(categorie: str, kolommen: pd.DataFrame, strings: list) -> pd.Series:
     else:
         check_tekst = kolommen.iloc[:, 0].astype(str)
     
-    # Controleer per string of deze in de regex voorkomt en label met de categorie
-    output = check_tekst.apply(lambda x: categorie if pd.notnull(x) and re.search(r, x) else '')
+    # Pas not toe indien strings zijn opgegeven
+    if len(strings_not) > 0:
+        r_not = '|'.join(map(re.escape, strings_not))
+        # Controleer per string not en daarna per string of deze in de regex voorkomt en label met de categorie
+        output = check_tekst.apply(lambda x: '' if re.search(r_not, x)  else (categorie if re.search(r, x) else ''))
+
+    else:
+        # Controleer per string of deze in de regex voorkomt en label met de categorie
+        output = check_tekst.apply(lambda x: categorie if pd.notnull(x) and re.search(r, x) else '')
     
     return output
 
@@ -67,10 +75,16 @@ def label_dataset(df: pd.DataFrame, dictionary: dict, kolomnaam_output: str, kol
         raise TypeError('De naam van de uitvoerkolom moet een string zijn.')
 
     # Label elke categorie in de dictionary
-    for categorie, (kolommen, strings) in dictionary.items():
-        if not isinstance(kolommen, list) and not isinstance(strings, list):
-            raise ValueError(f'Voor de categorie "{categorie}" moeten zowel "kolommen" als "strings" lijsten zijn.')
-        df[categorie] = label(categorie=categorie, kolommen=df[kolommen], strings=strings)
+    for k,v in dictionary.items():
+        categorie = k
+        kolommen = v[0]
+        strings = v[1]
+        #check of er een derde list met strings_not is
+        if len(v) == 3:
+            strings_not = v[2]
+            df[categorie] = label(categorie=categorie, kolommen=df[kolommen], strings=strings,strings_not=strings_not)
+        else:
+            df[categorie] = label(categorie=categorie, kolommen=df[kolommen], strings=strings)
 
     # Aggregeer naar een enkele uitvoerkolom als kolom_per_categorie False is
     if not kolom_per_categorie:
