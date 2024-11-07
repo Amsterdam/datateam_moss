@@ -1,4 +1,6 @@
 # Databricks notebook source
+from pyspark.sql import SparkSession, Row, DataFrame
+
 def check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str):
     """
     Controleert of het aantal rijen overeenkomt met het aantal unieke ID's in de opgegeven kolom.
