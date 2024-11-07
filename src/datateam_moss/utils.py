@@ -4,11 +4,10 @@ import pytz
 from datetime import datetime
 import pandas as pd
 
-from databricks.sdk.runtime import *
-from pyspark.sql import DataFrame, Row, SparkSession
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
-from pyspark.sql.window import Window
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F  
+from pyspark.sql import types as T      
+from pyspark.sql.window import Window   
 
 def sla_tabel_op_catalog(df: DataFrame, catalog: str, schema: str, tabel_naam: str, operatie: str, keuze: str):
     """
@@ -83,7 +82,7 @@ def del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: st
     # Verwijder de tabellen die in uitsluiten_tabellen staan, als deze parameter is meegegeven
     if uitsluiten_tabellen:
         uitsluiten_set = set(uitsluiten_tabellen.split(","))
-        set_tabellen_catalog_filter = set_tabellen_catalog_filter - uitsluiten_set
+        set_tabellen_catalog_filter -= uitsluiten_set
 
     # Controleer of er tabellen zijn die voldoen aan het opgegeven filter
     if not set_tabellen_catalog_filter:
@@ -104,16 +103,13 @@ def del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: st
         print("Verwijdering geannuleerd.")
     return
 
-def schrijf_naar_metatabel(catalogus:str, meta_schema:str, tabel_schema:str, tabel_naam:str, script_naam: str, controle: str, controle_waarde: str, meta_tabel_naam: str):
+def schrijf_naar_metatabel(catalogus: str, meta_schema: str, tabel_schema: str, tabel_naam: str, script_naam: str, controle: str, controle_waarde: str, meta_tabel_naam: str):
     """
     Schrijft gegevens naar de meta-tabel in de opgegeven catalogus en schema.
 
-    Laadt de bestaande meta-tabel in, voegt nieuwe gegevens toe, vervangt lege strings door None,
-    verwijdert rijen die volledig leeg zijn en schrijft de bijgewerkte gegevens terug naar de meta-tabel.
-    
     Args:
         catalogus (str): De naam van de catalogus waarin de meta-tabel zich bevindt.
-        meta_schema (str): De naam van het schema (Catalog) waarin de meta-tabel zich bevindt.
+        meta_schema (str): De naam van het schema waarin de meta-tabel zich bevindt.
         tabel_schema (str): De naam van het schema van de tabel waarvoor de gegevens worden toegevoegd.
         tabel_naam (str): De naam van de tabel waarvoor de gegevens worden toegevoegd.
         script_naam (str): De naam van het script dat de gegevens toevoegt.
@@ -123,40 +119,25 @@ def schrijf_naar_metatabel(catalogus:str, meta_schema:str, tabel_schema:str, tab
 
     Returns:
         None
-    """    
+    """
     try: 
-        # Laad de meta-tabel in
         meta_tabel_df = spark.read.table(f"{catalogus}.{meta_schema}.{meta_tabel_naam}")
-
-        # Definieer het schema & data
         data = [(catalogus, tabel_schema, tabel_naam, script_naam, controle, controle_waarde)]
         kolommen = ["table_catalog", "table_schema", "table_name", "script", "controle", "controle_waarde"]
-
-        # Creëer een tijdelijke DataFrame met de nieuwe gegevens
         temp_tabel = spark.createDataFrame(data, kolommen)
-
-        # Voeg de tijdelijke DataFrame samen met de bestaande meta-tabel
         union_df = meta_tabel_df.union(temp_tabel)
 
-        # Vervang lege strings door None en verwijder volledig lege rijen
         updated_df = (union_df
-                    .select([when(col(c) == "", None).otherwise(col(c)).alias(c) for c in union_df.columns])
+                    .select([F.when(F.col(c) == "", None).otherwise(F.col(c)).alias(c) for c in union_df.columns])
                     .na.drop(how="all").distinct())
 
-        # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
         updated_df.write.saveAsTable(f"{catalogus}.{meta_schema}.{meta_tabel_naam}", mode="overwrite")
     
     except:
-        # Definieer het schema & data
         data = [(catalogus, tabel_schema, tabel_naam, script_naam, controle, controle_waarde)]
         kolommen = ["table_catalog", "table_schema", "table_name", "script", "controle", "controle_waarde"]
-
-        # Creëer een tijdelijke DataFrame met de nieuwe gegevens
         temp_tabel = spark.createDataFrame(data, kolommen)
-
-        # Schrijf de bijgewerkte DataFrame terug naar de meta-tabel
         temp_tabel.write.saveAsTable(f"{catalogus}.{meta_schema}.{meta_tabel_naam}", mode="overwrite")
-    return
 
 def convert_datetime_format(input_format):
     """
@@ -184,36 +165,19 @@ def convert_datetime_format(input_format):
     
     return(input_format)
 
-
 def tijdzone_amsterdam(tijdformaat="%Y-%m-%d %H:%M:%S", date_string_timestamp="timestamp"):
     """Haalt de huidige tijd op en converteert deze naar het opgegeven tijdsformaat en de tijdzone van Amsterdam.
-       Kijk op https://www.w3schools.com/python/python_datetime.asp voor de formatting
-    Args:
-        tijdformaat (str, optioneel): De opmaakstring voor het gewenste tijdsformaat. Standaard ingesteld op "%Y-%m-%d %H:%M:%S".
-        date_string_timestamp (str, optioneel) = Hier kn je aangeven of je het terug wil als een "timestamp" (PySpark-kolom) of "date" (Pyspark-kolom) of "string" format.
-
-    Returns:
-        str of Timestamp: De huidige tijd in het opgegeven formaat en de tijdzone van Amsterdam.
     """
-    # Converteer datetime opmaak naar PySpark opmaak
     converted_format = convert_datetime_format(tijdformaat)
-
-    # Haal de huidige tijd op
     amsterdam_tz = pytz.timezone('Europe/Amsterdam')
     huidige_datum = datetime.now(amsterdam_tz).strftime(tijdformaat)
 
-    # Als return_type 'string' is, geef de tijd als string terug
     if date_string_timestamp == "string":
         return huidige_datum
-    
-    # Als het gaat om jaar, maand of dag aanduiding -> dan dataformat
     elif date_string_timestamp == "timestamp":
-        timestamp_expr = to_timestamp(lit(huidige_datum), converted_format)
-        return timestamp_expr
-        
+        return F.to_timestamp(F.lit(huidige_datum), converted_format)
     elif date_string_timestamp == "date":
-        timestamp_expr = to_date(lit(huidige_datum), converted_format)
-        return timestamp_expr
+        return F.to_date(F.lit(huidige_datum), converted_format)
 
 def vind_scheidingsteken(bestandspad, scheidingstekens=[',', ';', '\t', '|']):
     """
@@ -223,25 +187,14 @@ def vind_scheidingsteken(bestandspad, scheidingstekens=[',', ';', '\t', '|']):
     meer dan één kolom bevat. Indien ja, wordt aangenomen dat het gevonden scheidingsteken correct is.
 
     Args:
-        bestandspad (str): Het pad naar het CSV-bestand.
+        bestandspad (str): Het pad naar het CSV-bestand in the UC.
         scheidingstekens (list): Lijst van mogelijke scheidingstekens om te testen. Standaard zijn dit: [',', ';', '\t', '|'].
-
-    Returns:
-        tuple: Het gevonden scheidingsteken en de kolommen in het DataFrame.
-        Indien geen geldig scheidingsteken wordt gevonden, retourneert de functie (None, None).
     """
-    
     for scheidingsteken in scheidingstekens:
         try:
-            # Probeer het CSV-bestand te lezen met het huidige scheidingsteken
             df = spark.read.csv(bestandspad, sep=scheidingsteken, header=True)
-            
-            # Als het DataFrame meer dan één kolom bevat, aannemen dat dit het correcte scheidingsteken is
             if len(df.columns) > 1:
                 return scheidingsteken, df.columns
-        except Exception as e:
-            # Als er een fout optreedt bij het lezen van het bestand, probeer het volgende scheidingsteken
+        except Exception:
             continue
-
-    # Als geen enkel scheidingsteken werkt, return None
     return None, None
