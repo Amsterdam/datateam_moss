@@ -1,3 +1,4 @@
+# Databricks notebook source
 def clean_column_names(cols):
     """
     Clean and standardize column names by converting to lowercase, replacing unwanted characters with underscores,
