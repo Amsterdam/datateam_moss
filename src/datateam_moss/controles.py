@@ -1,5 +1,6 @@
 # Databricks notebook source
 from pyspark.sql import SparkSession, Row, DataFrame
+from databricks.sdk.runtime import *
 
 def check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str):
     """
