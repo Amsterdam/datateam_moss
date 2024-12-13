@@ -6,3 +6,4 @@ from datateam_moss.dimensioneel_modelleren import *
 from datateam_moss.label_dataset import *
 from datateam_moss.bronanalyse import *
 from datateam_moss.utils import *
+from datateam_moss.controles import *
