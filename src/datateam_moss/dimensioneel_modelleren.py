@@ -116,7 +116,7 @@ def maak_onbekende_dimensie(df, naam_bk, naam_id="", uitzonderings_kolommen=[]):
 
 
 # Deze functie zal in de toekomst de bovenstaande functie vervangen. Om dit te realiseren moet alle code eerst gebruik maken van deze functie.
-def maak_onbekende_ongeldige_dimensie(df, naam_bk, naam_sid="", uitzonderings_kolommen=[], onbekend_ongeldig="onbekend"):
+def maak_onbekende_ongeldige_dimensie(df, naam_bk, naam_sid="", onbekend_ongeldig="onbekend"):
     """
     Maakt een nieuwe record voor ontbrekende waarden in een dimensietabel.
 
@@ -124,7 +124,6 @@ def maak_onbekende_ongeldige_dimensie(df, naam_bk, naam_sid="", uitzonderings_ko
         df (DataFrame): Het bron DataFrame.
         naam_bk (str): De naam van de business_key (BK) kolom.
         naam_sid (str): De naam van de primaire sleutel / ID kolom.
-        uitzonderings_kolommen (list, optional): Lijst van kolommen die moeten worden uitgesloten bij het vergelijken van versies. Standaard is leeg.
         onbekend_ongeldig: geeft aan of je een onbekende of ongeldig record wilt maken. Standaard is "onbekend".
 
     Returns:
