@@ -115,6 +115,72 @@ def maak_onbekende_dimensie(df, naam_bk, naam_id="", uitzonderings_kolommen=[]):
     return df_met_onbekende_dimensie
 
 
+# Deze functie zal in de toekomst de bovenstaande functie vervangen. Om dit te realiseren moet alle code eerst gebruik maken van deze functie.
+def maak_onbekende_ongeldige_dimensie(df, naam_bk, naam_sid="", uitzonderings_kolommen=[], onbekend_ongeldig="onbekend"):
+    """
+    Maakt een nieuwe record voor ontbrekende waarden in een dimensietabel.
+
+    Args:
+        df (DataFrame): Het bron DataFrame.
+        naam_bk (str): De naam van de business_key (BK) kolom.
+        naam_sid (str): De naam van de primaire sleutel / ID kolom.
+        uitzonderings_kolommen (list, optional): Lijst van kolommen die moeten worden uitgesloten bij het vergelijken van versies. Standaard is leeg.
+        onbekend_ongeldig: geeft aan of je een onbekende of ongeldig record wilt maken. Standaard is "onbekend".
+
+    Returns:
+        DataFrame: Een nieuwe DataFrame met een record voor ontbrekende waarden.
+
+    Raises:
+        ValueError: Als de opgegeven kolomnaam voor de ID niet aanwezig is in het DataFrame.
+    """
+    nieuwe_data = []
+
+    for col in df.columns:
+        col_type = df.schema[col].dataType
+        if col == naam_bk and onbekend_ongeldig == "onbekend":
+            nieuwe_data.append("onbekend")
+        elif col == naam_bk and onbekend_ongeldig == "ongeldig":
+            nieuwe_data.append("ongeldig")
+        elif col == naam_sid and onbekend_ongeldig == "onbekend":
+            nieuwe_data.append(-1)
+        elif col == naam_sid and onbekend_ongeldig == "ongeldig":
+            nieuwe_data.append(-2)
+        elif col.lower() in ("m_geldig_van", "geldig_van"):
+            nieuwe_data.append(datetime(1900, 1, 1))
+        elif col.lower() in ("m_geldig_tot", "geldig_tot"):
+            nieuwe_data.append(datetime(9000, 12, 31))
+        elif col.lower() in ("m_is_actief", "is_actief"):
+            nieuwe_data.append(True)
+        elif col.lower() in("m_is_verwijderd", "is_verwijderd"):
+            nieuwe_data.append(False)
+        elif isinstance(col_type, DoubleType):
+            nieuwe_data.append(0.00)
+        elif isinstance(col_type, IntegerType) or isinstance(col_type, LongType):
+            nieuwe_data.append(0)
+        elif isinstance(col_type, StringType):
+            nieuwe_data.append(onbekend_ongeldig)
+        elif isinstance(col_type, BooleanType):
+            nieuwe_data.append(False)
+        elif isinstance(col_type, TimestampType):
+            datum_tijd = datetime.strptime("9000-12-31 23:59:59", "%Y-%m-%d %H:%M:%S")
+            nieuwe_data.append(datum_tijd)
+        elif isinstance(col_type, DateType):
+            datum_tijd = datetime.strptime("9000-12-31", "%Y-%m-%d").date()
+            nieuwe_data.append(datum_tijd)
+        elif isinstance(col_type, NullType):
+            nieuwe_data.append(onbekend_ongeldig)
+        elif isinstance(col_type, DecimalType):
+            nieuwe_data.append(Decimal("0.00"))
+
+    nieuwe_rij = Row(*nieuwe_data)
+    schema = StructType([StructField(col, df.schema[col].dataType, True) for col in df.columns])
+
+    # Bepaal het schema op basis van het dataframe
+    rij = spark.createDataFrame([nieuwe_rij], schema)  # Maak een nieuwe rij
+
+    return rij
+
+
 def vul_lege_cellen_in(df: DataFrame, uitzonderings_kolommen: list = []):
     """
     Vult lege cellen in een DataFrame in met standaardwaarden, behalve voor de opgegeven uitzonderingskolommen.
