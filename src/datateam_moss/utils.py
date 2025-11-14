@@ -1,14 +1,11 @@
 # Databricks notebook source
-import re
 import pytz
 from datetime import datetime
-import pandas as pd
 from databricks.sdk.runtime import *
-
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql import functions as F  
-from pyspark.sql import types as T      
-from pyspark.sql.window import Window   
+from pyspark.sql.types import StructType, StructField
+from pyspark.sql import DataFrame
+from pyspark.sql import functions as F     
+  
 
 def sla_tabel_op_catalog(df: DataFrame, catalog: str, schema: str, tabel_naam: str, operatie: str, keuze: str):
     """
