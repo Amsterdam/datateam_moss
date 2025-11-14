@@ -199,3 +199,39 @@ def vind_scheidingsteken(bestandspad, scheidingstekens=[',', ';', '\t', '|']):
         except Exception:
             continue
     return None, None
+
+def json_to_dataframe(spark, schema_dict, json_data) -> DataFrame:
+    """
+    Creëert een DataFrame op basis van een schema en optionele data.
+    
+    Parameters:
+        spark (SparkSession): De actieve SparkSession.
+        schema_dict (dict): Het schema in dictionary-formaat.
+        json_data (list): Lijst met data om in de DataFrame te laden.
+    
+    Returns:
+        DataFrame: Een PySpark DataFrame met het opgegeven schema en data.
+    """
+    # Haal de kolommen op uit het schema
+    columns = schema_dict.get("columns")
+
+    # Maak een StructType schema
+    struct_fields = []
+    for col in columns:
+        col_name = col["name"]
+        try:
+            col_type = eval(col["type"])  # Converteer string naar PySpark type
+        except Exception as e:
+            raise Exception(f'Ongeldige structfield type gebruikt voor {col}: ({e})')
+        col_nullable = col["nullable"]
+        struct_fields.append(StructField(col_name, col_type, col_nullable))
+    
+    struct_schema = StructType(struct_fields)
+    
+    # Maak de DataFrame
+    try:
+        df = spark.createDataFrame(json_data, schema=struct_schema)
+    except Exception as e:
+        raise Exception(f'Conversie naar een dataframe is mislukt: ({e})')
+    
+    return df
