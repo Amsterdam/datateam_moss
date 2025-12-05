@@ -1,5 +1,4 @@
-from pyspark.sql.functions import col, sha2, concat_ws, lit
-import re
+from pyspark.sql.functions import col, lit
 from pyspark.sql.utils import AnalysisException # Importeer de specifieke uitzondering voor SQL-fouten
 
 # 

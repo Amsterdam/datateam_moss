@@ -2,7 +2,7 @@
 
 # Import necessary Databricks runtime objects
 from databricks.sdk.runtime import *
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import SparkSession
 
 import pandas as pd
 

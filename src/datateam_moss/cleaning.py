@@ -2,7 +2,7 @@
 from databricks.sdk.runtime import *
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
-from pyspark.sql import SparkSession, Row, DataFrame
+from pyspark.sql import SparkSession, DataFrame
 import re
 
 def clean_column_names(cols):

@@ -1,26 +1,15 @@
 from pandas import DataFrame
 import pyspark.sql.functions as F
-from pyspark.sql import DataFrame as pydf
-from typing import Dict, List, Optional, Any
+from typing import Dict
 from delta.exceptions import ConcurrentWriteException
 from delta.tables import DeltaTable
-from datetime import datetime, timedelta
+from datetime import datetime
 from pyspark.sql.types import *
-from pyspark.sql.column import Column
-from pyspark.sql import SparkSession, Row, DataFrame
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.window import Window
 from functools import reduce
-from decimal import Decimal
 spark = SparkSession.builder.getOrCreate()
-
-# Import algemene packagaes
-import sys
 import time
-import uuid
-import hashlib
-import random
-import string
-import calendar
 import re
 
 #

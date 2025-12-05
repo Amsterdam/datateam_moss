@@ -1,28 +1,9 @@
-from pandas import DataFrame
 import pyspark.sql.functions as F
-from pyspark.sql import DataFrame as pydf
-from typing import Dict, List, Optional, Any
-from delta.exceptions import ConcurrentWriteException
-from delta.tables import DeltaTable
-from datetime import datetime, timedelta
-from pyspark.sql.types import *
-from pyspark.sql.column import Column
-from pyspark.sql import SparkSession, Row, DataFrame
-from pyspark.sql.window import Window
-from functools import reduce
-from decimal import Decimal
+from pyspark.sql import SparkSession, DataFrame
+
 spark = SparkSession.builder.getOrCreate()
 
-# Import algemene packagaes
-import sys
-import time
-import uuid
-import hashlib
-import random
-import string
-import calendar
-import re
- 
+
 # Functie om kolommen te versleutelen met AES
 def encrypt_columns_aes(_df, column_names, encryption_key, deterministic=False, encrypted_column_name_postfix="_encrypted", keep_original_columns=False):
     """
