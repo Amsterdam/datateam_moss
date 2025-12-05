@@ -9,9 +9,8 @@ build-backend = "setuptools.build_meta"
 name = "datateam_moss"
 version = "0.1.1"
 authors = [
-  { name="Moethoeli Hooplot", email="moethoeli.hooplot.breeuwer@amsterdam.nl" },
-  { name="Hilal Aydin", email="hilal.aydin.breeuwer@amsterdam.nl" },
-  { name="Robbin Breeuwer", email="r.j.breeuwer@amsterdam.nl" },
+  { name="Moethoeli Hooplot", email="moethoeli.hooplot@amsterdam.nl" },
+  { name="Hilal Aydin", email="hilal.aydin@amsterdam.nl" },
   { name="Koen Hallmann", email="k.hallmann@amsterdam.nl"}
 ]
 description = "Functions needed for datateam MOSS (municipality of Amsterdam)"
