@@ -1,7 +1,6 @@
 # Databricks notebook source
 
 import pandas as pd
-import numpy as np
 import re
 
 def label(categorie: str, kolommen: pd.DataFrame, strings: list, strings_not = []) -> pd.Series:

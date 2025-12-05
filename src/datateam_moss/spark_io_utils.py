@@ -197,38 +197,66 @@ def vind_scheidingsteken(bestandspad, scheidingstekens=[',', ';', '\t', '|']):
             continue
     return None, None
 
-def json_to_dataframe(spark, schema_dict, json_data) -> DataFrame:
+def create_table_from_ddl(
+    spark: SparkSession, 
+    table_definition: Dict[str, Any], 
+    full_table_name: str,
+    genereer_sid: bool = False
+) -> None:
     """
-    Creëert een DataFrame op basis van een schema en optionele data.
-    
-    Parameters:
-        spark (SparkSession): De actieve SparkSession.
-        schema_dict (dict): Het schema in dictionary-formaat.
-        json_data (list): Lijst met data om in de DataFrame te laden.
-    
-    Returns:
-        DataFrame: Een PySpark DataFrame met het opgegeven schema en data.
-    """
-    # Haal de kolommen op uit het schema
-    columns = schema_dict.get("columns")
+    Maakt een Delta-tabel aan in Spark op basis van een DDL-definitie, tenzij de tabel al bestaat.
 
-    # Maak een StructType schema
-    struct_fields = []
-    for col in columns:
-        col_name = col["name"]
-        try:
-            col_type = eval(col["type"])  # Converteer string naar PySpark type
-        except Exception as e:
-            raise Exception(f'Ongeldige structfield type gebruikt voor {col}: ({e})')
-        col_nullable = col["nullable"]
-        struct_fields.append(StructField(col_name, col_type, col_nullable))
+    Args:
+        spark (SparkSession): De actieve SparkSession.
+        table_definition (Dict[str, Any]): 
+            Dictionary met minimaal een "columns"-sleutel. 
+            "columns" moet een lijst bevatten van kolomdefinities in het formaat:
+            - name (str): Naam van de kolom
+            - type (str): Spark datatype als string, bv. "StringType()"
+            - nullable (bool): Of de kolom null-waarden toestaat
+        full_table_name (str): Volledig gekwalificeerde tabelnaam, bijv. "catalog.schema.table".
+        genereer_sid (bool, optional): Of een "sid" kolom moet worden gegenereerd. Defaults is False.
+        voorbeeld_table_def = {
+            "tabel_1_naam": {
+            "columns": [
+            {"name": "kolom1", "type": "IntegerType()", "nullable": True},
+            {"name": "kolom2", "type": "IntegerType()", "nullable": True}
+            ]
+            }
+        }
+ 
+    Returns:
+        None
+    """
+
+    if spark.catalog.tableExists(full_table_name):
+        print(f"Tabel {full_table_name} bestaat al. Er wordt niets gedaan.")
+        return
     
-    struct_schema = StructType(struct_fields)
+    # Parse tabelnaam
+    table_name_only = full_table_name.split(".")[-1]
     
-    # Maak de DataFrame
-    try:
-        df = spark.createDataFrame(json_data, schema=struct_schema)
-    except Exception as e:
-        raise Exception(f'Conversie naar een dataframe is mislukt: ({e})')
+    # Bouw kolommenlijst
+    columns_ddl = []
+    for col in table_definition["columns"]:
+        col_def = f"`{col['name']}` {col['type'].replace('Type()', '').replace('ArrayType(String)', 'Array<string>').upper()}"
+        if not col.get("nullable", True):
+            col_def += " NOT NULL"
+        columns_ddl.append(col_def)
     
-    return df
+    # Eventueel SID kolom toevoegen
+    if genereer_sid:
+        sid_col = f"`sid_{table_name_only}` BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1)"
+        columns_ddl.insert(0, sid_col)  # zet SID vooraan
+    
+    # Combineer alles in CREATE TABLE DDL
+    ddl = f"""
+    CREATE TABLE {full_table_name} (
+        {', '.join(columns_ddl)}
+    )
+    USING DELTA
+    """
+    print (ddl)
+    # Maak de tabel aan
+    spark.sql(ddl)
+    print(f"Tabel {full_table_name} is aangemaakt{' met SID' if genereer_sid else ''}.")
