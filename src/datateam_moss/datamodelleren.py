@@ -1,10 +1,6 @@
 # Databricks notebook source
 
 # Import algemene packagaes
-import sys
-import time
-import uuid
-import hashlib
 import xxhash
 import random
 import string
@@ -14,7 +10,7 @@ from databricks.sdk.runtime import *
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from datetime import datetime
-from pyspark.sql import SparkSession, Row, DataFrame
+from pyspark.sql import Row, DataFrame
 
 def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: str):
     """

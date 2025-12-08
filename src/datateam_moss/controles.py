@@ -1,7 +1,6 @@
 # Databricks notebook source
 from pyspark.sql import SparkSession, DataFrame
 import pyspark.sql.functions as F
-from pyspark.sql import DataFrame
 
 def check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str):
     """
@@ -92,36 +91,8 @@ def haal_df_act_hist_op(
         ]
     # Laad de tabellen
     actueel_df = spark.table(f"{CATALOG}.{TARGET_SCHEMA}.{ACT_TABEL}")
-    historisch_df = spark.table(f"{CATALOG}.{TARGET_SCHEMA}.{HIST_TABEL}").filter("m_is_actief = true")
-
-    # Stap 1: Converteer de kolom naar een timestamp
-    
-    historisch_df = historisch_df.withColumn(
-        "createdon@odata_community_display_v1_formattedvalue",
-        F.to_timestamp("createdon@odata_community_display_v1_formattedvalue", "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-    )
-    # Stap 2: Formatteer de timestamp naar het gewenste formaat
-    historisch_df = historisch_df.withColumn(
-        "createdon@odata_community_display_v1_formattedvalue",
-        F.date_format("createdon@odata_community_display_v1_formattedvalue", "d-M-yyyy HH:mm")
-    )
-    if OBJECT_BK != 'bk_accounts':
-        historisch_df = historisch_df.withColumn(
-            'createdon',
-            F.date_format(
-                F.to_timestamp('createdon', "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
-                    "yyyy-MM-dd'T'HH:mm:00'Z'"
-                )
-        )
-        actueel_df= actueel_df.withColumn(
-            'createdon',
-             F.date_format(
-                F.to_timestamp('createdon', "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
-                    "yyyy-MM-dd'T'HH:mm:00'Z'"
-                )
-        )   
-
-
+    historisch_df = spark.table(f"{CATALOG}.{TARGET_SCHEMA}.{HIST_TABEL}").filter("m_is_actief = true")   
+  
     # Bepaal dynamisch de lijst met kolommen die vergeleken moeten worden
     # We gaan uit van de kolommen in de Actuele tabel
     all_actueel_columns = actueel_df.columns
