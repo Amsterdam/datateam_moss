@@ -1,10 +1,6 @@
 # Databricks notebook source
 
 # Import algemene packagaes
-import sys
-import time
-import uuid
-import hashlib
 import xxhash
 import random
 import string
@@ -14,8 +10,7 @@ from databricks.sdk.runtime import *
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from datetime import datetime
-from pyspark.sql import SparkSession, Row, DataFrame
-from pyspark.sql.window import Window
+from pyspark.sql import Row, DataFrame
 
 def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: str):
     """
@@ -64,6 +59,9 @@ def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: 
     resultaat_df = (df.withColumn(naam_id, udf_voeg_willekeurig_toe_en_hash_toe(col(business_key))))
     return resultaat_df
 
+#
+# Uitfaseren
+#
 
 def maak_onbekende_dimensie(df, naam_bk, naam_id="", uitzonderings_kolommen=[]):
     """
