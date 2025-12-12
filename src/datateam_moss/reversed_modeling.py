@@ -6,7 +6,6 @@ from collections import defaultdict
 import pandas as pd
 from databricks.sdk.runtime import *
 from pyspark.sql.functions import col
-import builtins as bltns
 
 
 class Dataset:
@@ -506,18 +505,3 @@ class Dataset:
 
 
         return json_refdb_schema
-
-# COMMAND ----------
-
-# # Example usage 
-# CATALOG = 'dpms_dev'
-# SCHEMA = 'silver'
-# # SCHEMA = 'gold'
-# DATASET = 'amis'
-
-# dataset = Dataset(
-#     spark_session=spark,
-#     catalog=CATALOG,
-#     schema=SCHEMA,
-#     dataset=DATASET,
-# )

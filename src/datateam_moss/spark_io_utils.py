@@ -1,12 +1,13 @@
 # Databricks notebook source
 import pytz
 from datetime import datetime
-from databricks.sdk.runtime import *
+# from databricks.sdk.runtime import *
 from pyspark.sql.types import *
-from pyspark.sql import DataFrame
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from typing import List, Dict   
-  
+from typing import List, Dict  , Any 
+
+spark = SparkSession()
 
 def sla_tabel_op_catalog(df: DataFrame, catalog: str, schema: str, tabel_naam: str, operatie: str, keuze: str):
     """
@@ -40,11 +41,11 @@ def sla_tabel_op_catalog(df: DataFrame, catalog: str, schema: str, tabel_naam: s
     elif operatie == "overwriteSchema" and keuze == "false":
         df.write.option("overwriteSchema", "false").mode("overwrite").saveAsTable(f"{catalog}.{schema}.{tabel_naam}")
 
-def get_catalog():
-    """
-    Get the catalog for the current workspace.
-    """
-    return dbutils.secrets.get(scope='keyvault', key='catalog')
+# def get_catalog():
+#     """
+#     Get the catalog for the current workspace.
+#     """
+#     return dbutils.secrets.get(scope='keyvault', key='catalog')
 
 def del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: str, uitsluiten_tabellen: str = None):
     """

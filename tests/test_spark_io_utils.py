@@ -1,6 +1,3 @@
-# import sys
-# print(sys.executable)
-
 import pytest
 import unittest
 from datetime import datetime
