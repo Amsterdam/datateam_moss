@@ -1,7 +1,6 @@
 # Databricks notebook source
 from pyspark.sql import SparkSession, DataFrame
 import pyspark.sql.functions as F
-from pyspark.sql import DataFrame
 from typing import List, Tuple, Optional
 from pyspark.sql.window import Window # Importeer de Window specificatie
 
@@ -82,7 +81,7 @@ def vergelijk_origineel_nieuw_tbl(
     ORG_FILTER: Optional[str] = None, 
     NEW_FILTER: Optional[str] = None,
     EXCLUDE_COLUMNS_LIST: Optional[List[str]] = None
-) -> Tuple[spark.sql.DataFrame, spark.sql.DataFrame]:
+) -> Tuple[DataFrame, DataFrame]:
     """
     Vergelijkt de structuur en het rij-aantal van twee PySpark DataFrames (Origineel en Nieuw) 
     na het uitsluiten van specifieke metadatavelden en het toepassen van optionele filters.
