@@ -1,13 +1,12 @@
 # Databricks notebook source
 import pytz
 from datetime import datetime
-# from databricks.sdk.runtime import *
+from databricks.sdk.runtime import *
 from pyspark.sql.types import *
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from typing import List, Dict  , Any 
 
-spark = SparkSession()
 
 def sla_tabel_op_catalog(df: DataFrame, catalog: str, schema: str, tabel_naam: str, operatie: str, keuze: str):
     """
