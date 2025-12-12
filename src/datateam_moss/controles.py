@@ -1,6 +1,8 @@
 # Databricks notebook source
 from pyspark.sql import SparkSession, DataFrame
 import pyspark.sql.functions as F
+from pyspark.sql import DataFrame
+from typing import List, Tuple, Optional
 
 def check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str):
     """
@@ -51,7 +53,7 @@ def controle_unieke_waarden_kolom(df: DataFrame, kolom: str):
     
     Laatste update: 10-01-2023
     """
-    window_spec = Window().partitionBy(kolom)
+    window_spec = F.Window().partitionBy(kolom)
     df_with_counts = (
         df.join(broadcast(df.dropDuplicates([kolom])), kolom, "inner")
         .select(kolom, count(kolom).over(window_spec).alias("count"))
@@ -66,8 +68,7 @@ def controle_unieke_waarden_kolom(df: DataFrame, kolom: str):
         raise ValueError(f"Niet alle waarden in de kolom '{kolom}' zijn uniek.")
     return
 
-from pyspark.sql import SparkSession
-from typing import List, Tuple, Optional # Importeer Optional
+
 
 def vergelijk_origineel_nieuw_tbl(
     spark: SparkSession,
@@ -188,9 +189,7 @@ def vergelijk_origineel_nieuw_tbl(
 
     return org_df_selected, new_df_selected
 
-from pyspark.sql import DataFrame
-from pyspark.sql import functions as F
-from typing import List
+
 
 def genereer_afwijkingen_rapport(
     org_df: DataFrame, 
@@ -217,7 +216,7 @@ def genereer_afwijkingen_rapport(
 
     # We gaan ervan uit dat de kolommen in new_df en org_df identiek zijn (resultaat van vergelijk_origineel_nieuw_dfs)
     # De sleutelkolommen worden uitgesloten van de WAARDE-vergelijking
-    comparison_columns = [c for c c in new_df.columns if c not in OBJECT_KEY_COLS]
+    comparison_columns = [c for c in new_df.columns if c not in OBJECT_KEY_COLS]
     
     # --- STAP 1: Bepaal JOIN conditie en voer FULL OUTER JOIN uit ---
     

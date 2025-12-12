@@ -3,9 +3,10 @@ import pytz
 from datetime import datetime
 from databricks.sdk.runtime import *
 from pyspark.sql.types import *
-from pyspark.sql import DataFrame
-from pyspark.sql import functions as F     
-  
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
+from typing import List, Dict  , Any 
+
 
 def sla_tabel_op_catalog(df: DataFrame, catalog: str, schema: str, tabel_naam: str, operatie: str, keuze: str):
     """
@@ -39,11 +40,11 @@ def sla_tabel_op_catalog(df: DataFrame, catalog: str, schema: str, tabel_naam: s
     elif operatie == "overwriteSchema" and keuze == "false":
         df.write.option("overwriteSchema", "false").mode("overwrite").saveAsTable(f"{catalog}.{schema}.{tabel_naam}")
 
-def get_catalog():
-    """
-    Get the catalog for the current workspace.
-    """
-    return dbutils.secrets.get(scope='keyvault', key='catalog')
+# def get_catalog():
+#     """
+#     Get the catalog for the current workspace.
+#     """
+#     return dbutils.secrets.get(scope='keyvault', key='catalog')
 
 def del_meerdere_tabellen_catalog(catalog: str, schema: str, tabellen_filter: str, uitsluiten_tabellen: str = None):
     """
@@ -260,3 +261,72 @@ def create_table_from_ddl(
     # Maak de tabel aan
     spark.sql(ddl)
     print(f"Tabel {full_table_name} is aangemaakt{' met SID' if genereer_sid else ''}.")
+
+def create_stringtype_dataframe_from_list(spark, data: List) -> DataFrame:
+    """
+    Converteert een lijst van dictionaries naar een PySpark DataFrame, waarbij alles als string wordt opgeslagen om de data zo ruw mogelijk op te halen.
+
+    Parameters:
+        spark (SparkSession): De actieve SparkSession.
+        data (list): Lijst met data om in de DataFrame te laden.
+    
+    Returns:
+        DataFrame: Een PySpark DataFrame met het opgegeven schema en data.
+    """
+
+    if not isinstance(data, list):
+        raise TypeError("Parameter 'data' moet een lijst zijn.")
+
+    if len(data) == 0:
+        raise ValueError("Parameter 'data' mag niet leeg zijn.")
+
+    schema = StructType([
+    StructField(col, StringType(), True) 
+    for col in data[0].keys()
+        ])
+
+    try:
+        df = spark.createDataFrame(data, schema=schema)
+    except Exception as e:
+        raise Exception(f'Fout bij het converteren van de data naar een PySpark DataFrame: {e}')
+
+    return df
+
+def add_metadata_columns_to_dataframe(df: DataFrame, m_columns: List, runtime: datetime, bron: str) -> DataFrame:
+    """
+    Voegt metadata-kolommen toe aan een PySpark DataFrame.
+
+    Parameters:
+        df (DataFrame): De PySpark DataFrame waarop de metadata-kolommen moeten worden toegevoegd.
+        m_columns (List): Een lijst met kolomnamen die moeten worden toegevoegd als metadata-kolommen.
+        runtime (str): De runtime van de notebook
+        bron (str): De bron van de data
+
+    Returns:
+        DataFrame: Een PySpark DataFrame met de toegevoegde metadata-kolommen.
+    """
+    runtime_str = runtime.strftime("%Y%m%d%H%M%S")
+
+    if not isinstance(m_columns, list):
+        raise TypeError("Parameter 'columns' moet een lijst zijn.")
+    if not isinstance(runtime, datetime):
+        raise TypeError("Parameter 'runtime' moet een datetime object zijn.")
+    if not isinstance(bron, str):
+        raise TypeError("Parameter 'bron' moet een string zijn.")
+
+    if "m_geldig_van" in m_columns:
+        df = df.withColumn("m_geldig_van", F.to_timestamp(F.lit("1900-12-31")))
+    if "m_geldig_tot" in m_columns:
+        df = df.withColumn("m_geldig_tot", F.to_timestamp(F.lit("9000-12-31")))
+    if "m_is_actief" in m_columns:
+        df = df.withColumn("m_is_actief", F.lit(True))
+    if "m_aangemaakt_op" in m_columns:
+        df = df.withColumn("m_aangemaakt_op", F.to_timestamp(F.lit(runtime)))
+    if "m_gewijzigd_op" in m_columns:
+        df = df.withColumn("m_gewijzigd_op", F.to_timestamp(F.lit(runtime)))
+    if "m_bron" in m_columns:
+        df = df.withColumn("m_bron", F.lit(bron))
+    if "m_runid" in m_columns:
+        df = df.withColumn("m_runid", F.lit(runtime_str))
+    
+    return df
