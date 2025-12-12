@@ -3,8 +3,9 @@ from pyspark.sql import SparkSession, DataFrame
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
 from typing import List, Tuple, Optional
+from pyspark.sql.window import Window # Importeer de Window specificatie
 
-def check_nrow_tabel_vs_distinct_id(tabelnaam: str, id: str):
+def check_nrow_tabel_vs_distinct_id(spark: SparkSession, tabelnaam: str, id: str):
     """
     Controleert of het aantal rijen overeenkomt met het aantal unieke ID's in de opgegeven kolom.
 
@@ -53,11 +54,11 @@ def controle_unieke_waarden_kolom(df: DataFrame, kolom: str):
     
     Laatste update: 10-01-2023
     """
-    window_spec = F.Window().partitionBy(kolom)
+    window_spec = Window().partitionBy(kolom)
     df_with_counts = (
-        df.join(broadcast(df.dropDuplicates([kolom])), kolom, "inner")
-        .select(kolom, count(kolom).over(window_spec).alias("count"))
-        .filter(col("count") > 1)
+        df.join(F.broadcast(df.dropDuplicates([kolom])), kolom, "inner")
+        .select(kolom, F.count(kolom).over(window_spec).alias("count"))
+        .filter(F.col("count") > 1)
         .distinct()
     )
     
