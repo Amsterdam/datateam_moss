@@ -1,6 +1,6 @@
 from pandas import DataFrame
 import pyspark.sql.functions as F
-from typing import Dict
+from typing import Dict, Any
 from delta.exceptions import ConcurrentWriteException
 from delta.tables import DeltaTable
 from datetime import datetime
@@ -378,7 +378,7 @@ def perform_scd2_delta_merge(
         set={
             "m_geldig_tot": F.col(f"source.{escaped_mutation_datetime_column}"), # Datum van mutatie
             "m_is_actief": F.lit(False),
-            "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(F.TimestampType())
+            "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(TimestampType())
         }
     )
 
@@ -392,7 +392,7 @@ def perform_scd2_delta_merge(
         set={
             "m_geldig_tot": F.col(f"source.{escaped_mutation_datetime_column}"),
             "m_is_actief": F.lit(False),
-            "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(F.TimestampType())
+            "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(TimestampType())
         }
     )
 
@@ -422,12 +422,12 @@ def perform_scd2_delta_merge(
             "m_is_actief": F.lit(True),
             "m_bron": F.lit("MS CRM"),
             "m_runid": F.lit(m_runid_value),
-            "m_aangemaakt_op": F.lit(m_aangemaakt_value).cast(F.TimestampType()),
-            "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(F.TimestampType())
+            "m_aangemaakt_op": F.lit(m_aangemaakt_value).cast(TimestampType()),
+            "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(TimestampType())
         }
     ).execute()
 
-def genereer_scd_tijd_combinaties_per_key(tables: Dict[str, Dict[str, F.Any]], key_col: str) -> DataFrame:
+def genereer_scd_tijd_combinaties_per_key(tables: Dict[str, Dict[str, Any]], key_col: str) -> DataFrame:
     """
     Combineert meerdere SCD Type 2-tabellen en genereert opeenvolgende tijdsintervallen per business key.
     Gebruikt alleen Spark-native functies (geen UDFs).
