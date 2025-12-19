@@ -225,7 +225,7 @@ def perform_scd2_merge(
         except Exception as e:
             # Rollback
             restore_table_with_retry(target_table_name, version_before)
-            raise SCD2MergeException(f"Error executing merge operation on Delta table '{target_table_name}': {e}. \n Restored to previous version ({version_before}). \n") from e
+            raise F.SCD2MergeException(f"Error executing merge operation on Delta table '{target_table_name}': {e}. \n Restored to previous version ({version_before}). \n") from e
 
 # Function to generate the CREATE TABLE script for a history table
 # functie voor genereren historie tabel obv bestaande tabel
@@ -376,9 +376,9 @@ def perform_scd2_delta_merge(
     merge_builder = merge_builder.whenMatchedUpdate(
         condition=f"source.{escaped_delete_col} = True AND target.m_is_actief = True",
         set={
-            "m_geldig_tot": col(f"source.{escaped_mutation_datetime_column}"), # Datum van mutatie
-            "m_is_actief": lit(False),
-            "m_bijgewerkt_op": lit(m_bijgewerkt_value).cast(TimestampType())
+            "m_geldig_tot": F.col(f"source.{escaped_mutation_datetime_column}"), # Datum van mutatie
+            "m_is_actief": F.lit(False),
+            "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(F.TimestampType())
         }
     )
 
@@ -390,9 +390,9 @@ def perform_scd2_delta_merge(
     merge_builder = merge_builder.whenMatchedUpdate(
         condition=scd2_update_condition,
         set={
-            "m_geldig_tot": col(f"source.{escaped_mutation_datetime_column}"),
-            "m_is_actief": lit(False),
-            "m_bijgewerkt_op": lit(m_bijgewerkt_value).cast(TimestampType())
+            "m_geldig_tot": F.col(f"source.{escaped_mutation_datetime_column}"),
+            "m_is_actief": F.lit(False),
+            "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(F.TimestampType())
         }
     )
 
@@ -405,7 +405,7 @@ def perform_scd2_delta_merge(
     insert_values_from_source = {}
     for col_name in insert_columns:
         escaped_col_name = escape_column_name(col_name)
-        insert_values_from_source[col_name] = col(f"source.{escaped_col_name}")
+        insert_values_from_source[col_name] = F.col(f"source.{escaped_col_name}")
 
     # Insert Conditie: Alleen invoegen als het record NIET gemarkeerd is als verwijderd
     insert_condition = f"source.{escaped_delete_col} = False"
@@ -417,13 +417,13 @@ def perform_scd2_delta_merge(
         condition=insert_condition, 
         values={
             **insert_values_from_source,
-            "m_geldig_van": col(f"source.{escaped_mutation_datetime_column}"),
-            "m_geldig_tot": to_timestamp(lit("9000-12-31 00:00:00"), "yyyy-MM-dd HH:mm:ss"),
-            "m_is_actief": lit(True),
-            "m_bron": lit("MS CRM"),
-            "m_runid": lit(m_runid_value),
-            "m_aangemaakt_op": lit(m_aangemaakt_value).cast(TimestampType()),
-            "m_bijgewerkt_op": lit(m_bijgewerkt_value).cast(TimestampType())
+            "m_geldig_van": F.col(f"source.{escaped_mutation_datetime_column}"),
+            "m_geldig_tot": F.to_timestamp(F.lit("9000-12-31 00:00:00"), "yyyy-MM-dd HH:mm:ss"),
+            "m_is_actief": F.lit(True),
+            "m_bron": F.lit("MS CRM"),
+            "m_runid": F.lit(m_runid_value),
+            "m_aangemaakt_op": F.lit(m_aangemaakt_value).cast(F.TimestampType()),
+            "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(F.TimestampType())
         }
     ).execute()
 
