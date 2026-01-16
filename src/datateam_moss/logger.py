@@ -2,8 +2,6 @@
 and adds a console logger for immediate feedback during development.
 """
 import sys
-from pyspark.dbutils import DBUtils
-from pyspark.sql import SparkSession
 import logging
 from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
 from opentelemetry.sdk._logs import (
@@ -11,10 +9,8 @@ from opentelemetry.sdk._logs import (
     LoggingHandler,
 )
 from opentelemetry._logs import set_logger_provider, get_logger_provider
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, SimpleLogRecordProcessor
-
-spark = SparkSession.builder.getOrCreate()
-dbutils = DBUtils(spark)
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from databricks.sdk.runtime import dbutils
 
 
 def get_logger(name: str,
