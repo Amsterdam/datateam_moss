@@ -66,10 +66,11 @@ def create_volume(
     volume_name: str,
     storage_account: str,
     container: str,
-    external: bool = None
+    external: bool = False
 ) -> None:
     """
-    Maakt een Databricks Unity Catalog external location aan indien deze niet bestaat.
+    Maakt een Databricks Unity Catalog volume aan indien deze niet bestaat. De external parameter bepaalt
+    of het een managed of een external volume wordt. 
 
     Args:
         spark (Sparksession):
