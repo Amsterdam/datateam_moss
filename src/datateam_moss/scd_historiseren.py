@@ -12,9 +12,11 @@ spark = SparkSession.builder.getOrCreate()
 import time
 import re
 
+class SCD2MergeException(Exception):
+    pass
+
 #
-# versie van onderwijs utils
-#
+# validate_merge_columns(
 
 def validate_merge_columns(source_df: DataFrame, merge_condition: str) -> None:
     """
@@ -44,7 +46,7 @@ def validate_merge_columns(source_df: DataFrame, merge_condition: str) -> None:
         raise ValueError(f"Validation failed: combination of columns {source_cols} is not unique in source_df.")
 
 #
-# versie van onderwijs utils
+# restore_table_with_retry
 #
 
 def restore_table_with_retry(
@@ -82,7 +84,7 @@ def restore_table_with_retry(
 
 
 #
-# SCD2 merge versie van onderwijs utils
+# SCD2 merge versie 20260119
 #
 
 def perform_scd2_merge(
@@ -117,116 +119,7 @@ def perform_scd2_merge(
     # Validate that the combination of source merge columns is unique
     validate_merge_columns(source_df, merge_condition)
 
-    M_RUNID = m_runid #F.date_format(F.current_timestamp(), "yyyyMMddHHmmss")
-    # Validate that the combination of source merge columns is unique
-    #validate_merge_columns(source_df, merge_condition)
-
-    # indien de bron record timestamp als geldigheids van-tot wordt genomen wordt de timestamp vervangen door een source_validity_timestamp
-    source_validity_timestamp = source_validity_timestamp if source_validity_timestamp is not None else F.current_timestamp()
-
-    # maak business keys aan en voeg toe aan source_df
-    cols_to_concat = [F.col(k).cast("string") for k in key_columns]
-
-    if len(key_columns) == 1:
-        # Als er maar één key kolom is, is de business key gelijk aan die kolom (ook omgezet naar string)
-        #bk_column_value = F.col(key_columns[0]).cast("string")
-        single_key_column_name = list(key_columns.keys())[0] 
-        source_df_bk = source_df.withColumn(bk_column, F.col(single_key_column_name).cast("string"))
-        # source_df = source_df.withColumn(bk_column_name, F.col(key_columns[0]).cast("string"))
-    else:
-        # Als er meerdere key kolommen zijn, concateneer ze met '~'
-        # bk_column_value = F.concat_ws("~", *cols_to_concat)
-        source_df_bk = source_df.withColumn(bk_column, F.concat_ws("~", *cols_to_concat))
-    # source_df_bk.display()
-    # source_df = source_df.withColumn(bk_column_name, bk_column_value)
-
-    # If the target table does not exist, create it and fill it with data from source_df. Otherwise, perform merge operation.
-    if not spark.catalog.tableExists(target_table_name):
-        df_with_scd_fields = (source_df_bk
-                            .withColumn("m_geldig_van", source_validity_timestamp)
-                            .withColumn("m_geldig_tot", F.lit(None).cast("timestamp"))
-                            .withColumn("m_gewijzigd_op", F.lit(None).cast("timestamp"))
-                            .withColumn("m_aangemaakt_op", F.current_timestamp())
-                            .withColumn("m_is_actief", F.lit(True))
-                            .withColumn("m_runid", F.lit(M_RUNID))           
-                            )
-        df_with_scd_fields.write.format("delta").option("overwriteSchema", "true").mode("overwrite").saveAsTable(target_table_name)
-    else:
-        # Load the existing Delta table
-        try:
-            target_table = DeltaTable.forName(spark, target_table_name)
-        except Exception as e:
-            raise ValueError(f"Error loading Delta table '{target_table_name}': {e}")
-
-        # Ensure we are only modifying active records
-        _merge_condition = f"{merge_condition} AND m_is_actief = True"
-        
-        # Detect changes: If any update column differs in an active record, the record should be closed
-        _update_condition = f"({' OR '.join([f'target.{col} IS DISTINCT FROM source.{col}' for col in update_columns.keys()])}) AND target.m_is_actief = True"
-        
-        ## Step 1: Close old records (update m_geldig_tot and m_is_actief)
-        merge_step_1 = target_table.alias("target").merge(
-
-        source_df_bk.alias("source"),
-
-        _merge_condition
-        ).whenMatchedUpdate(
-            # close old record (new record with updated values gets inserted later)
-            condition=_update_condition,
-            set={
-                "m_geldig_tot": source_validity_timestamp,  # Close old record
-                "m_is_actief": F.lit(False),  # Deactivate old record
-                "m_gewijzigd_op": F.current_timestamp(), # Wijzigings datum
-                "m_runid": M_RUNID # Runid bij voorkeur gevuld door variable
-            }
-        )
-    
-        # Conditionally close deleted records
-        if close_deleted_records:
-            merge_step_1 = merge_step_1.whenNotMatchedBySourceUpdate(
-            condition=(
-                (F.col("target.m_is_actief") == True) 
-            ),
-            set={
-                "m_geldig_tot": source_validity_timestamp,
-                "m_is_actief": F.lit(False),
-                "m_gewijzigd_op": F.current_timestamp(), # Wijzigings datum
-                "m_runid": M_RUNID  # Runid bij voorkeur gevuld door variable
-            }
-        )
-
-        ## Step 2: Insert new active records, both new and updated
-        merge_step_2 = target_table.alias("target").merge(
-            
-        source_df_bk.alias("source"),
-        _merge_condition
-        ).whenNotMatchedInsert(
-            # insert new record with updated values for the matched rows
-            values={
-                **insert_columns, 
-                "m_geldig_van": source_validity_timestamp, # New record valid from now
-                "m_geldig_tot": F.to_timestamp(F.lit("9000-12-31 00:00:00"), "yyyy-MM-dd HH:mm:ss"),
-                "m_is_actief": F.lit(True), # Activate new record
-                "m_gewijzigd_op": F.current_timestamp(), # Wijzigings datum
-                "m_aangemaakt_op": F.current_timestamp(), 
-                "m_runid": M_RUNID  # Runid bij voorkeur gevuld door variable
-                }
-        )
-
-        try:
-            # Note current version
-            version_before = spark.sql(f"DESCRIBE HISTORY {target_table_name}").collect()[0]["version"]
-
-            # Execute the first merge (closes old records)
-            merge_step_1.execute()
-
-            # # Execute the second merge (inserts new records)
-            merge_step_2.execute()
-        except Exception as e:
-            # Rollback
-            restore_table_with_retry(target_table_name, version_before)
-            raise F.SCD2MergeException(f"Error executing merge operation on Delta table '{target_table_name}': {e}. \n Restored to previous version ({version_before}). \n") from e
-
+#
 # Function to generate the CREATE TABLE script for a history table
 # functie voor genereren historie tabel obv bestaande tabel
 def generate_history_table_script(spark , catalog_schema: str, source_table_name: str) -> str:
