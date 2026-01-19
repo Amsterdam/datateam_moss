@@ -2,6 +2,8 @@
 and adds a console logger for immediate feedback during development.
 """
 import sys
+from pyspark.dbutils import DBUtils
+from pyspark.sql import SparkSession
 import logging
 from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
 from opentelemetry.sdk._logs import (
@@ -10,8 +12,9 @@ from opentelemetry.sdk._logs import (
 )
 from opentelemetry._logs import set_logger_provider, get_logger_provider
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from databricks.sdk.runtime import dbutils
 
+spark = SparkSession.builder.getOrCreate()
+dbutils = DBUtils(spark)
 
 def get_logger(name: str,
                stream_log_format: str = '%(asctime)s - %(levelname)s - %(message)s',
@@ -74,7 +77,7 @@ def get_logger(name: str,
         else:
             logger.error(
                 "AzureMonitorLogExporter not initialized due to missing connection string.")
-    
+
     # --- Attach Azure handler to this logger (only once) ---
     if not any(isinstance(h, LoggingHandler) for h in logger.handlers):
         try:
