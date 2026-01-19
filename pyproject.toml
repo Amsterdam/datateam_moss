@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "datateam_moss"
-version = "0.2.2"
+version = "0.2.3"
 authors = [
   { name="Moethoeli Hooplot", email="moethoeli.hooplot@amsterdam.nl" },
   { name="Hilal Aydin", email="hilal.aydin@amsterdam.nl" },
