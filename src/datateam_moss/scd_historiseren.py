@@ -227,7 +227,7 @@ def perform_scd2_merge(
         except Exception as e:
             # Rollback
             restore_table_with_retry(target_table_name, version_before)
-          	raise Exception(f"Error executing merge operation on Delta table '{target_table_name}': ({e}). Restored to previous version ({version_before}).") from e
+            raise Exception(f"Error executing merge operation on Delta table '{target_table_name}': ({e}). Restored to previous version ({version_before}).") from e
 
 #
 # Function to generate the CREATE TABLE script for a history table
