@@ -1,4 +1,4 @@
-from logger import get_logger
+from datateam_moss.logger import get_logger
 from pyspark.sql import SparkSession
 
 logger = get_logger("__name__")

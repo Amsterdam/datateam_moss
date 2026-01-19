@@ -13,8 +13,7 @@ import time
 import re
 
 #
-# versie van onderwijs utils
-#
+# validate_merge_columns(
 
 def validate_merge_columns(source_df: DataFrame, merge_condition: str) -> None:
     """
@@ -44,7 +43,7 @@ def validate_merge_columns(source_df: DataFrame, merge_condition: str) -> None:
         raise ValueError(f"Validation failed: combination of columns {source_cols} is not unique in source_df.")
 
 #
-# versie van onderwijs utils
+# restore_table_with_retry
 #
 
 def restore_table_with_retry(
@@ -82,7 +81,7 @@ def restore_table_with_retry(
 
 
 #
-# SCD2 merge versie van onderwijs utils
+# SCD2 merge versie 20260119
 #
 
 def perform_scd2_merge(
@@ -124,6 +123,9 @@ def perform_scd2_merge(
     # indien de bron record timestamp als geldigheids van-tot wordt genomen wordt de timestamp vervangen door een source_validity_timestamp
     source_validity_timestamp = source_validity_timestamp if source_validity_timestamp is not None else F.current_timestamp()
 
+   # Zorg dat bk_column een string is (haalt de waarde uit de lijst als dat nodig is)
+    bk_column_name = bk_column[0] if isinstance(bk_column, list) else bk_column
+
     # maak business keys aan en voeg toe aan source_df
     cols_to_concat = [F.col(k).cast("string") for k in key_columns]
 
@@ -145,7 +147,7 @@ def perform_scd2_merge(
         df_with_scd_fields = (source_df_bk
                             .withColumn("m_geldig_van", source_validity_timestamp)
                             .withColumn("m_geldig_tot", F.lit(None).cast("timestamp"))
-                            .withColumn("m_gewijzigd_op", F.lit(None).cast("timestamp"))
+                            .withColumn("m_bijgewerkt_op", F.lit(None).cast("timestamp"))
                             .withColumn("m_aangemaakt_op", F.current_timestamp())
                             .withColumn("m_is_actief", F.lit(True))
                             .withColumn("m_runid", F.lit(M_RUNID))           
@@ -176,8 +178,8 @@ def perform_scd2_merge(
             set={
                 "m_geldig_tot": source_validity_timestamp,  # Close old record
                 "m_is_actief": F.lit(False),  # Deactivate old record
-                "m_gewijzigd_op": F.current_timestamp(), # Wijzigings datum
-                "m_runid": M_RUNID # Runid bij voorkeur gevuld door variable
+                "m_bijgewerkt_op": F.current_timestamp(), # Wijzigings datum
+                "m_runid": F.lit(M_RUNID) # Runid bij voorkeur gevuld door variable
             }
         )
     
@@ -190,8 +192,8 @@ def perform_scd2_merge(
             set={
                 "m_geldig_tot": source_validity_timestamp,
                 "m_is_actief": F.lit(False),
-                "m_gewijzigd_op": F.current_timestamp(), # Wijzigings datum
-                "m_runid": M_RUNID  # Runid bij voorkeur gevuld door variable
+                "m_bijgewerkt_op": F.current_timestamp(), # Wijzigings datum
+                "m_runid": F.lit(M_RUNID)  # Runid bij voorkeur gevuld door variable
             }
         )
 
@@ -207,9 +209,9 @@ def perform_scd2_merge(
                 "m_geldig_van": source_validity_timestamp, # New record valid from now
                 "m_geldig_tot": F.to_timestamp(F.lit("9000-12-31 00:00:00"), "yyyy-MM-dd HH:mm:ss"),
                 "m_is_actief": F.lit(True), # Activate new record
-                "m_gewijzigd_op": F.current_timestamp(), # Wijzigings datum
+                "m_bijgewerkt_op": F.current_timestamp(), # Wijzigings datum
                 "m_aangemaakt_op": F.current_timestamp(), 
-                "m_runid": M_RUNID  # Runid bij voorkeur gevuld door variable
+                "m_runid": F.lit(M_RUNID)  # Runid bij voorkeur gevuld door variable
                 }
         )
 
@@ -225,8 +227,9 @@ def perform_scd2_merge(
         except Exception as e:
             # Rollback
             restore_table_with_retry(target_table_name, version_before)
-            raise F.SCD2MergeException(f"Error executing merge operation on Delta table '{target_table_name}': {e}. \n Restored to previous version ({version_before}). \n") from e
+          	raise Exception(f"Error executing merge operation on Delta table '{target_table_name}': ({e}). Restored to previous version ({version_before}).") from e
 
+#
 # Function to generate the CREATE TABLE script for a history table
 # functie voor genereren historie tabel obv bestaande tabel
 def generate_history_table_script(spark , catalog_schema: str, source_table_name: str) -> str:
