@@ -1,5 +1,6 @@
 from pyspark.sql.functions import col, lit
 from pyspark.sql.utils import AnalysisException # Importeer de specifieke uitzondering voor SQL-fouten
+import sys
 
 # 
 # Hier staan generieke functies die gebruikt worden om aanpasingen te doen aan tabellen en kollommen via eenmalige
