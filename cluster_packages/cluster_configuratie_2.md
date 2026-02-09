@@ -82,7 +82,7 @@
 | numpy                    | 1.23.5        |
 | oauthlib                 | 3.2.0         |
 | packaging                | 22.0          |
-| pandas                   | 1.5.3         |
+| pandas                   | 3.0.0         |
 | pandocfilters            | 1.5.0         |
 | parso                    | 0.8.3         |
 | pathspec                 | 0.10.3        |

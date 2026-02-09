@@ -6,7 +6,7 @@ twine
 pyspark==3.2.2
 databricks-cli==0.18.0
 tabulate==0.9.0
-pandas==1.4.4
+pandas==3.0.0
 xxhash==3.4.1
 
 opentelemetry-sdk==1.39.0
