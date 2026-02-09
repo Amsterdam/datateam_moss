@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "datateam_moss"
-version = "0.2.6"
+version = "0.2.7"
 authors = [
   { name="XX", email="x@x.nl" }
 ]
@@ -21,5 +21,5 @@ dependencies = [
   "opentelemetry-sdk==1.39.0",
   "azure-monitor-opentelemetry-exporter==1.0.0b46",
   "azure-mgmt-monitor==7.0.0",
-  "pandas==1.4.4"
+  "pandas==3.0.0"
 ]
