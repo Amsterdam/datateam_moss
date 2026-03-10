@@ -316,6 +316,7 @@ def perform_scd2_delta_merge(
     update_columns: list,
     insert_columns: list,
     mutation_datetime_column: str,
+    m_bron: str,
     m_runid_value: str,
     m_aangemaakt_value: datetime,
     m_bijgewerkt_value: datetime,
@@ -336,6 +337,7 @@ def perform_scd2_delta_merge(
                                 uit het source_df moeten worden overgenomen voor nieuwe records.
         mutation_datetime_column (str): De naam van de kolom in source_df die de wijzigingsdatum/tijd bevat
                                         voor het openen van nieuwe records en sluiten van verwijderde records.
+        m_bron (str): de waarde voor de bron waaruit de data afkomstig is
         m_runid_value (str): De waarde voor de m_runid kolom (een string, bijv. van de starttijd van de run).
         m_aangemaakt_value (datetime): De timestamp voor de m_aangemaakt_op kolom (vast voor de hele run/batch).
         m_bijgewerkt_value (datetime): De timestamp voor de m_bijgewerkt_op kolom (vast voor de hele run/batch).
@@ -423,7 +425,7 @@ def perform_scd2_delta_merge(
             "m_geldig_van": F.col(f"source.{escaped_mutation_datetime_column}"),
             "m_geldig_tot": F.to_timestamp(F.lit("9000-12-31 00:00:00"), "yyyy-MM-dd HH:mm:ss"),
             "m_is_actief": F.lit(True),
-            "m_bron": F.lit("MS CRM"),
+            "m_bron": F.lit(m_bron),
             "m_runid": F.lit(m_runid_value),
             "m_aangemaakt_op": F.lit(m_aangemaakt_value).cast(TimestampType()),
             "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(TimestampType())
