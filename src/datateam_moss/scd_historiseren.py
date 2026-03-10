@@ -425,7 +425,7 @@ def perform_scd2_delta_merge(
             "m_geldig_van": F.col(f"source.{escaped_mutation_datetime_column}"),
             "m_geldig_tot": F.to_timestamp(F.lit("9000-12-31 00:00:00"), "yyyy-MM-dd HH:mm:ss"),
             "m_is_actief": F.lit(True),
-            "m_bron": F.lit("MS CRM"),
+            "m_bron": F.lit(m_bron),
             "m_runid": F.lit(m_runid_value),
             "m_aangemaakt_op": F.lit(m_aangemaakt_value).cast(TimestampType()),
             "m_bijgewerkt_op": F.lit(m_bijgewerkt_value).cast(TimestampType())
