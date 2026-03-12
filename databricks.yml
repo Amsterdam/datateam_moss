@@ -1,0 +1,19 @@
+# This is a Databricks asset bundle definition for datateam_moss.
+# The Databricks extension requires databricks.yml configuration file.
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+
+bundle:
+  name: datateam_moss
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-3718726846411268.8.azuredatabricks.net
+
+  ## Optionally, there could be 'staging' or 'prod' targets here.
+  #
+  # prod:
+  #   workspace:
+  #     host: https://adb-3718726846411268.8.azuredatabricks.net
