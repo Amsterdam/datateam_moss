@@ -287,7 +287,7 @@ def create_stringtype_dataframe_from_list(spark, data: List) -> DataFrame:
 
     return df
 
-def add_metadata_columns_to_dataframe(df: DataFrame, m_columns: List, runtime: datetime, bron: str) -> DataFrame:
+def add_metadata_columns_to_dataframe(df: DataFrame, m_columns: List, runtime: datetime, bron: str = None) -> DataFrame:
     """
     Voegt metadata-kolommen toe aan een PySpark DataFrame.
 
