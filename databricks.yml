@@ -10,10 +10,5 @@ targets:
     mode: development
     default: true
     workspace:
-      host: https://adb-3718726846411268.8.azuredatabricks.net
+      host: https://adb-3718726846411268.8.azuredatabricks.net #dit is de dpmv workspace om met databricks cluster te kunnen testen
 
-  ## Optionally, there could be 'staging' or 'prod' targets here.
-  #
-  # prod:
-  #   workspace:
-  #     host: https://adb-3718726846411268.8.azuredatabricks.net
