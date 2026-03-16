@@ -5,8 +5,11 @@ from databricks.sdk.runtime import *
 from pyspark.sql.types import *
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from typing import List, Dict  , Any 
+from typing import *
 
+from datateam_moss.logger import get_logger
+
+logger = get_logger("__spark_io_utils__")
 
 def sla_tabel_op_catalog(df: DataFrame, catalog: str, schema: str, tabel_naam: str, operatie: str, keuze: str):
     """
@@ -293,7 +296,7 @@ def add_metadata_columns_to_dataframe(df: DataFrame, m_columns: List, runtime: d
 
     Parameters:
         df (DataFrame): De PySpark DataFrame waarop de metadata-kolommen moeten worden toegevoegd.
-        m_columns (List): Een lijst met kolomnamen die moeten worden toegevoegd als metadata-kolommen.
+        m_columns (List): Een lijst met kolomnamen die moeten worden toegevoegd als metadata-kolommen. 
         runtime (str): De runtime van de notebook
         bron (str): De bron van de data
 
@@ -306,8 +309,6 @@ def add_metadata_columns_to_dataframe(df: DataFrame, m_columns: List, runtime: d
         raise TypeError("Parameter 'columns' moet een lijst zijn.")
     if not isinstance(runtime, datetime):
         raise TypeError("Parameter 'runtime' moet een datetime object zijn.")
-    if not isinstance(bron, str):
-        raise TypeError("Parameter 'bron' moet een string zijn.")
 
     if "m_geldig_van" in m_columns:
         df = df.withColumn("m_geldig_van", F.to_timestamp(F.lit("1900-12-31")))
@@ -325,3 +326,45 @@ def add_metadata_columns_to_dataframe(df: DataFrame, m_columns: List, runtime: d
         df = df.withColumn("m_runid", F.lit(runtime_str))
     
     return df
+
+def write_to_table(
+    df: DataFrame, 
+    target_table: str,
+    mode: str = "overwrite",
+    schema_evolution_strategy: Dict[str, str] = {"mergeSchema": "false"}
+) -> None:
+    """
+    Schrijft een dataframe naar een opgegeven tabel in Spark met schema-evolutie-opties.
+
+    Parameters:
+        df (DataFrame): Het dataframe dat moet worden weggeschreven.
+        target_table (str): De volledige naam van de doel-tabel inc. catalog en schema.
+        mode (str): De schrijfmethode (bijv. "overwrite", "append", "error", "ignore").
+                    Standaard is "overwrite".
+        schema_evolution_strategy (Dict[str, str]): Opties voor schema-evolutie, zoals {"mergeSchema": "false"}.
+                    Standaard bevat het {"mergeSchema": "false"}.
+
+    Raises:
+        ValueError: Als de target_table niet is opgegeven.
+        Exception: Als er een fout optreedt tijdens het schrijven.
+    """
+    if not target_table:
+        raise ValueError("De target_table is niet opgegeven. Schrijven wordt gestopt.")
+
+    # Zorg ervoor dat "mergeSchema" standaard op "false" staat als het niet is meegegeven
+    schema_evolution_strategy.setdefault("mergeSchema", "false")
+
+    try:
+        logger.info(f"Start schrijven naar tabel {target_table} met mode '{mode}' en schema-evolutie {schema_evolution_strategy}.")
+
+        # Pas de schema-evolutie-opties toe en schrijf het dataframe naar de tabel
+        writer = df.write
+        for key, value in schema_evolution_strategy.items():
+            writer = writer.option(key, value)
+        
+        writer.mode(mode).saveAsTable(target_table)
+        
+        logger.info(f"Data succesvol geschreven naar tabel {target_table}.")
+    except Exception as e:
+        logger.error(f"Fout bij het schrijven naar tabel {target_table}: {e}")
+        raise  # Laat de fout opnieuw opgooien om de pipeline te laten stoppen

@@ -328,7 +328,7 @@ def cleanse_and_prep_dataframe(df: DataFrame, table_schema: Dict, m_columns: Lis
             parse_and_format_date(df=df,date_column=column)
 
     # Stap 4: voeg metadata kolommen toe
-    df = siu.add_metadata_columns_to_dataframe(df=df, m_columns=m_columns, runtime=runtime, bron="JVS") #TODO: bron moet weg
+    df = siu.add_metadata_columns_to_dataframe(df=df, m_columns=m_columns, runtime=runtime)
 
     df = cast_columns_from_schema(df=df, table_schema=table_schema)
         

@@ -14,6 +14,9 @@ from pyspark.sql import Row, DataFrame
 from typing import *
 
 from datateam_moss import spark_io_utils as siu
+from datateam_moss.logger import get_logger
+
+logger = get_logger("__datamodelleren__")
 
 def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: str):
     """
@@ -269,3 +272,41 @@ def prep_dataframe_for_dimensions(df: DataFrame, m_metadata: List, runtime: date
     df = siu.add_metadata_columns_to_dataframe(df=df, m_columns=m_metadata, runtime=runtime, bron=m_bron)
 
     return df
+
+def run_dimensions(df: DataFrame, 
+                   target_table: str, 
+                   runtime: datetime, 
+                   m_metadata: List, 
+                   m_bron: str = None) -> None:
+    """
+    Laadt een dataframe in een dimensietabel met foutafhandeling en logger.
+
+    Parameters:
+        df: Het dataframe dat moet worden geladen.
+        target_table: De naam van de doel-dimensietabel.
+        runtime: De runtime van de operatie.
+        m_metadata: Metadata die nodig is voor de verwerking.
+        m_bron: De broncode of -omschrijving die wordt toegevoegd als metadata.
+    """
+
+    if df is None or df.isEmpty():
+        logger.error("Het dataframe is leeg of ongeldig.")
+        raise ValueError(f"Het dataframe voor tabel {target_table} is leeg. Pipeline wordt gestopt.")
+
+    if not target_table:    
+        logger.error("De target_table is niet opgegeven.")
+
+    try:
+        logger.info(f"Start prep dataframe voor dimensie {target_table}.")
+
+        df = prep_dataframe_for_dimensions(df=df,
+                                    runtime=runtime,
+                                    m_metadata=m_metadata,
+                                    m_bron=m_bron)
+        
+        logger.info(f"Eind prep dataframe voor dimensie {target_table}.")
+
+        siu.write_to_table(df=df, target_table=target_table)
+
+    except Exception as e:
+        logger.error(f"Onverwachte fout bij het laden van data voor tabel {target_table}: {e}")
