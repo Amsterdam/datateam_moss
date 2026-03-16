@@ -294,7 +294,7 @@ def run_dimensions(df: DataFrame,
         raise ValueError(f"Het dataframe voor tabel {target_table} is leeg. Pipeline wordt gestopt.")
 
     if not target_table:    
-        logger.error("De target_table is niet opgegeven.")
+        raise ValueError("De target_table is niet opgegeven.")
 
     try:
         logger.info(f"Start prep dataframe voor dimensie {target_table}.")
