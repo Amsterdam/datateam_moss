@@ -11,6 +11,12 @@ from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from datetime import datetime
 from pyspark.sql import Row, DataFrame
+from typing import *
+
+from datateam_moss import spark_io_utils as siu
+from datateam_moss.logger import get_logger
+
+logger = get_logger("__datamodelleren__")
 
 def voeg_willekeurig_toe_en_hash_toe(df: DataFrame, business_key: str, naam_id: str):
     """
@@ -233,3 +239,74 @@ def prepareer_dimensie_tabel(df: DataFrame, naam_bk: str, naam_id: str, uitzonde
     df_hashed_onbekend_ingevuld_lege_cellen = vul_lege_cellen_in(df=df_hashed_onbekend, uitzonderings_kolommen=[])
 
     return df_hashed_onbekend_ingevuld_lege_cellen
+
+def prep_dataframe_for_dimensions(df: DataFrame, m_metadata: List, runtime: datetime, m_bron: str = None ) -> DataFrame:
+    """
+    Verrijkt een DataFrame met onbekende en ongeldige rijen, voegt metadata toe en slaat het resultaat op als een Spark SQL-tabel.
+
+    Deze functie:
+    - Voegt een rij toe voor 'onbekende' waarden en een rij voor 'ongeldige' waarden.
+    - Genereert metadata (zoals verwerkingstijd en bron) via een hulpfunctie.
+    - Slaat het verrijkte DataFrame op in de opgegeven doeltabel in de Spark catalogus.
+
+    Parameters:
+    -----------
+    df : Het input DataFrame dat verrijkt en opgeslagen moet worden.
+    m_metadata : Een lijst met metadata kolommen die moeten worden toegevoegd aan de DataFrame.
+    runtime : De verwerkingstijd die wordt toegevoegd als metadata.
+    m_bron : De broncode of -omschrijving die wordt toegevoegd als metadata.
+
+    """
+    naam_bk = next((col for col in df.columns if col.startswith("bk_")), None)
+    naam_sid = next((col for col in df.columns if col.startswith("sid_")), None)
+
+    #Union onbekend en ongeldige records
+    onbekende_rij = maak_onbekende_ongeldige_dimensie(df=df,naam_bk=naam_bk, naam_sid=naam_sid)
+    ongeldige_rij = maak_onbekende_ongeldige_dimensie(df=df,naam_bk=naam_bk, naam_sid=naam_sid, onbekend_ongeldig="ongeldig")
+
+    df = (df
+            .union(onbekende_rij)
+            .union(ongeldige_rij)
+            )
+
+    df = siu.add_metadata_columns_to_dataframe(df=df, m_columns=m_metadata, runtime=runtime, bron=m_bron)
+
+    return df
+
+def run_dimensions(df: DataFrame, 
+                   target_table: str, 
+                   runtime: datetime, 
+                   m_metadata: List, 
+                   m_bron: str = None) -> None:
+    """
+    Laadt een dataframe in een dimensietabel met foutafhandeling en logger.
+
+    Parameters:
+        df: Het dataframe dat moet worden geladen.
+        target_table: De naam van de doel-dimensietabel.
+        runtime: De runtime van de operatie.
+        m_metadata: Metadata die nodig is voor de verwerking.
+        m_bron: De broncode of -omschrijving die wordt toegevoegd als metadata.
+    """
+
+    if df is None or df.isEmpty():
+        logger.error("Het dataframe is leeg of ongeldig.")
+        raise ValueError(f"Het dataframe voor tabel {target_table} is leeg. Pipeline wordt gestopt.")
+
+    if not target_table:    
+        raise ValueError("De target_table is niet opgegeven.")
+
+    try:
+        logger.info(f"Start prep dataframe voor dimensie {target_table}.")
+
+        df = prep_dataframe_for_dimensions(df=df,
+                                    runtime=runtime,
+                                    m_metadata=m_metadata,
+                                    m_bron=m_bron)
+        
+        logger.info(f"Eind prep dataframe voor dimensie {target_table}.")
+
+        siu.write_to_table(df=df, target_table=target_table)
+
+    except Exception as e:
+        logger.error(f"Onverwachte fout bij het laden van data voor tabel {target_table}: {e}")
