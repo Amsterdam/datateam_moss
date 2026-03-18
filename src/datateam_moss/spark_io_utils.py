@@ -234,7 +234,7 @@ def create_table_from_ddl(
     
     # Parse tabelnaam
     table_name_only = full_table_name.split(".")[-1]
-    entity_name = table_name_only.split("_")[1]
+    entity_name = table_name_only.split("_", 1)[1]
 
     # Bouw kolommenlijst
     columns_ddl = []
