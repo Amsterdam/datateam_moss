@@ -234,7 +234,6 @@ def create_table_from_ddl(
     
     # Parse tabelnaam
     table_name_only = full_table_name.split(".")[-1]
-    entity_name = table_name_only.split("_", 1)[1]
 
     # Bouw kolommenlijst
     columns_ddl = []
@@ -246,6 +245,12 @@ def create_table_from_ddl(
     
     # Eventueel SID kolom toevoegen
     if genereer_sid:
+        prefixes = ("d_", "f_", "hlp_", "dlt_", "ref_")
+        if table_name_only.startswith(prefixes):
+            entity_name = table_name_only.split("_", 1)[1]
+        else:
+            entity_name = table_name_only
+
         sid_col = f"`sid_{entity_name}` BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1)"
         columns_ddl.insert(0, sid_col)  # zet SID vooraan
     
