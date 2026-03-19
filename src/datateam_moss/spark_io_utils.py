@@ -326,6 +326,8 @@ def add_metadata_columns_to_dataframe(df: DataFrame, m_columns: List, runtime: d
         df = df.withColumn("m_aangemaakt_op", F.to_timestamp(F.lit(runtime)))
     if "m_gewijzigd_op" in m_columns:
         df = df.withColumn("m_gewijzigd_op", F.to_timestamp(F.lit(runtime)))
+    if "m_bijgewerkt_op" in m_columns:
+        df = df.withColumn("m_bijgewerkt_op", F.to_timestamp(F.lit(runtime)))
     if "m_bron" in m_columns:
         df = df.withColumn("m_bron", F.lit(bron))
     if "m_runid" in m_columns:
