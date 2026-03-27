@@ -229,7 +229,7 @@ def create_table_from_ddl(
     """
 
     if spark.catalog.tableExists(full_table_name):
-        print(f"Tabel {full_table_name} bestaat al. Er wordt niets gedaan.")
+        logger.info(f"Tabel {full_table_name} bestaat al. Er wordt niets gedaan.")
         return
     
     # Parse tabelnaam
@@ -245,13 +245,17 @@ def create_table_from_ddl(
     
     # Eventueel SID kolom toevoegen
     if genereer_sid:
-        prefixes = ("d_", "f_", "hlp_", "dlt_", "ref_")
+        prefixes = ("d_", "f_", "h_", "dlt_", "ref_")
         if table_name_only.startswith(prefixes):
             entity_name = table_name_only.split("_", 1)[1]
         else:
             entity_name = table_name_only
 
-        sid_col = f"`sid_{entity_name}` BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1)"
+        #Bij dimensies begint de sid met -2, zodat we de onbekend en ongeldige rijen kunnen toevoegen.
+        if table_name_only.startswith("d_"):
+            sid_col = f"`sid_{entity_name}` BIGINT GENERATED ALWAYS AS IDENTITY (START WITH -2 INCREMENT BY 1)"
+        else:
+            sid_col = f"`sid_{entity_name}` BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1)"
         columns_ddl.insert(0, sid_col)  # zet SID vooraan
     
     # Combineer alles in CREATE TABLE DDL
@@ -261,7 +265,7 @@ def create_table_from_ddl(
     )
     USING DELTA
     """
-    print (ddl)
+    logger.info(ddl)
     # Maak de tabel aan
     spark.sql(ddl)
     print(f"Tabel {full_table_name} is aangemaakt{' met SID' if genereer_sid else ''}.")
