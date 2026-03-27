@@ -264,9 +264,10 @@ def prep_dataframe_for_dimensions(df: DataFrame, m_metadata: List, runtime: date
     onbekende_rij = maak_onbekende_ongeldige_dimensie(df=df,naam_bk=naam_bk, naam_sid=naam_sid)
     ongeldige_rij = maak_onbekende_ongeldige_dimensie(df=df,naam_bk=naam_bk, naam_sid=naam_sid, onbekend_ongeldig="ongeldig")
 
-    df = (df
+    #Onderstaande volgorde in de union is belangrijk te behouden, zodat ongeldig en onbekend altijd -2 en -1 waardes krijgen in de sid.
+    df = (ongeldige_rij
             .union(onbekende_rij)
-            .union(ongeldige_rij)
+            .union(df)
             )
 
     df = siu.add_metadata_columns_to_dataframe(df=df, m_columns=m_metadata, runtime=runtime, bron=m_bron)
