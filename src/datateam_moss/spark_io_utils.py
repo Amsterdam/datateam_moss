@@ -8,6 +8,7 @@ from pyspark.sql import functions as F
 from typing import *
 
 from datateam_moss.logger import get_logger
+from datateam_moss.cleaning import _parse_spark_type
 
 logger = get_logger("__spark_io_utils__")
 
@@ -238,7 +239,19 @@ def create_table_from_ddl(
     # Bouw kolommenlijst
     columns_ddl = []
     for col in table_definition["columns"]:
-        col_def = f"`{col['name']}` {col['type'].replace('Type()', '').replace('ArrayType(String)', 'Array<string>').upper()}"
+        col_type: str = col.get("type", None)
+        spark_type = _parse_spark_type(col_type)
+
+        type_str = str(spark_type)
+
+        # specifieke fixes eerst
+        if isinstance(spark_type, DecimalType):
+            type_str = f"DECIMAL({spark_type.precision},{spark_type.scale})"
+        else:
+            type_str = type_str.replace("Type()", "").replace("Type", "")
+
+        col_def = f"`{col['name']}` {type_str.upper()}"
+        
         if not col.get("nullable", True):
             col_def += " NOT NULL"
         columns_ddl.append(col_def)
