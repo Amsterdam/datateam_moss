@@ -166,54 +166,6 @@ def to_databricks_boolean_column(column_name: str) -> Column:
     )
 
 
-def _parse_spark_type(type_str: str) -> DataType:
-    """
-    Deze functie parset datatypes om te bepalen of er een precision of scale in zit. 
-    Dit is noodzakelijk zodat de json datatype DecimalType() wordt omgezet naar default precision namelijk 10,0,
-    terwijl DecimalType(10,2) wordt behouden met de juiste precision en scale.
-
-    Args:
-        type_str (str):
-            Het datatype dat geparsed dient te worden.
-
-    Returns:
-        DataType: Pyspark datatype
-
-    Raises:
-        KeyError:
-            Indien een kolomtype niet wordt gevonden in de interne mapping van
-            ondersteunde typen.
-    """
-
-    type_mapping = {
-        "StringType": StringType,
-        "LongType": LongType,
-        "BooleanType": BooleanType,
-        "TimestampType": TimestampType,
-        "DoubleType": DoubleType,
-        "IntegerType": IntegerType,
-        "DecimalType": DecimalType,
-        "DateType": DateType
-    }
-
-    #Geeft een match als een type is gevonden, anders lege string
-    match = re.match(r"(\w+)\((.*?)\)", type_str)
-    if not match:
-        raise KeyError(f"Invalid type format '{type_str}'")
-
-    #type_name is alles voor de haakjes, args alles erna dus "10,2"
-    type_name, args = match.groups()
-
-    if type_name not in type_mapping:
-        raise KeyError(f"Unknown type '{type_name}'")
-
-    if args.strip() == "":
-        return type_mapping[type_name]()
-    else:
-        parsed_args = [int(a.strip()) for a in args.split(",")]
-        return type_mapping[type_name](*parsed_args)
-
-
 def cast_columns_from_schema(df: DataFrame, table_schema: Dict[str, Any]) -> DataFrame:
     """
     Cast DataFrame-kolommen op basis van een aangepast JSON-schema.
@@ -252,7 +204,7 @@ def cast_columns_from_schema(df: DataFrame, table_schema: Dict[str, Any]) -> Dat
         target_name: str = column.get("name", None)
         type_str: str = column.get("type", None)
 
-        target_type: DataType = _parse_spark_type(type_str)
+        target_type: DataType = siu._parse_spark_type(type_str)
 
         df = df.withColumn(
             target_name,
