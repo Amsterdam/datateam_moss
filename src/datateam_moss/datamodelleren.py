@@ -240,39 +240,42 @@ def prepareer_dimensie_tabel(df: DataFrame, naam_bk: str, naam_id: str, uitzonde
 
     return df_hashed_onbekend_ingevuld_lege_cellen
 
-def prep_dataframe_for_dimensions(df: DataFrame, m_metadata: List, runtime: datetime, m_bron: str = None ) -> DataFrame:
+def insert_onbekend_ongeldig_records(spark, target_table: str, m_metadata: List, runtime: datetime, m_bron: str = None ) -> None:
     """
-    Verrijkt een DataFrame met onbekende en ongeldige rijen, voegt metadata toe en slaat het resultaat op als een Spark SQL-tabel.
-
     Deze functie:
-    - Voegt een rij toe voor 'onbekende' waarden en een rij voor 'ongeldige' waarden.
+    - Maakt een rij aan voor 'onbekende' waarden en een rij voor 'ongeldige' waarden.
     - Genereert metadata (zoals verwerkingstijd en bron) via een hulpfunctie.
-    - Slaat het verrijkte DataFrame op in de opgegeven doeltabel in de Spark catalogus.
+    - Insert de rijen in de opgegeven doeltabel in de Spark catalogus.
 
     Parameters:
     -----------
-    df : Het input DataFrame dat verrijkt en opgeslagen moet worden.
-    m_metadata : Een lijst met metadata kolommen die moeten worden toegevoegd aan de DataFrame.
-    runtime : De verwerkingstijd die wordt toegevoegd als metadata.
-    m_bron : De broncode of -omschrijving die wordt toegevoegd als metadata.
+    target_table: De naam van de doel-dimensietabel.
+    m_metadata: Een lijst met metadata kolommen die moeten worden toegevoegd aan de DataFrame.
+    runtime: De verwerkingstijd die wordt toegevoegd als metadata.
+    m_bron: De broncode of -omschrijving die wordt toegevoegd als metadata.
 
     """
-    naam_bk = next((col for col in df.columns if col.startswith("bk_")), None)
-    naam_sid = next((col for col in df.columns if col.startswith("sid_")), None)
+    target_df = spark.table(target_table)
+    target_cols = target_df.columns
+    naam_bk = next((col for col in target_cols if col.startswith("bk_")), None)
+    naam_sid = next((col for col in target_cols if col.startswith("sid_")), None)
 
     #Union onbekend en ongeldige records
     onbekende_rij = maak_onbekende_ongeldige_dimensie(df=df,naam_bk=naam_bk, naam_sid=naam_sid)
     ongeldige_rij = maak_onbekende_ongeldige_dimensie(df=df,naam_bk=naam_bk, naam_sid=naam_sid, onbekend_ongeldig="ongeldig")
 
     #Onderstaande volgorde in de union is belangrijk te behouden, zodat ongeldig en onbekend altijd -2 en -1 waardes krijgen in de sid.
-    df = (ongeldige_rij
-            .union(onbekende_rij)
-            .union(df)
-            )
+    df = ongeldige_rij.union(onbekende_rij)
 
     df = siu.add_metadata_columns_to_dataframe(df=df, m_columns=m_metadata, runtime=runtime, bron=m_bron)
 
-    return df
+    # Zorg dat kolomvolgorde klopt
+    df = df.select(*target_cols)
+
+    try:
+        df.write.insertInto(target_table)
+    except Exception as e:
+        logger.error(f"Error writing to table {target_table}: {e}")
 
 def run_dimensions(df: DataFrame, 
                    target_table: str, 
@@ -298,16 +301,16 @@ def run_dimensions(df: DataFrame,
         raise ValueError("De target_table is niet opgegeven.")
 
     try:
-        logger.info(f"Start prep dataframe voor dimensie {target_table}.")
+        siu.write_to_table(df=df, target_table=target_table)
 
-        df = prep_dataframe_for_dimensions(df=df,
+        logger.info(f"Insert onbekend en ongeldig records in {target_table}.")
+
+        insert_onbekend_ongeldig_records(target_table=target_table,
                                     runtime=runtime,
                                     m_metadata=m_metadata,
                                     m_bron=m_bron)
         
-        logger.info(f"Eind prep dataframe voor dimensie {target_table}.")
-
-        siu.write_to_table(df=df, target_table=target_table)
+        logger.info(f"Insert onbekend en ongeldig records succesvol.")
 
     except Exception as e:
         logger.error(f"Onverwachte fout bij het laden van data voor tabel {target_table}: {e}")
