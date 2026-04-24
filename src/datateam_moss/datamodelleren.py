@@ -277,7 +277,8 @@ def insert_onbekend_ongeldig_records(spark, target_table: str, m_metadata: List,
     except Exception as e:
         logger.error(f"Error writing to table {target_table}: {e}")
 
-def run_dimensions(df: DataFrame, 
+def run_dimensions(spark,
+                   df: DataFrame, 
                    target_table: str, 
                    runtime: datetime, 
                    m_metadata: List, 
@@ -305,7 +306,8 @@ def run_dimensions(df: DataFrame,
 
         logger.info(f"Insert onbekend en ongeldig records in {target_table}.")
 
-        insert_onbekend_ongeldig_records(target_table=target_table,
+        insert_onbekend_ongeldig_records(spark=spark,
+                                    target_table=target_table,
                                     runtime=runtime,
                                     m_metadata=m_metadata,
                                     m_bron=m_bron)
