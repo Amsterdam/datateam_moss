@@ -261,8 +261,8 @@ def insert_onbekend_ongeldig_records(spark, target_table: str, m_metadata: List,
     naam_sid = next((col for col in target_cols if col.startswith("sid_")), None)
 
     #Union onbekend en ongeldige records
-    onbekende_rij = maak_onbekende_ongeldige_dimensie(df=df,naam_bk=naam_bk, naam_sid=naam_sid)
-    ongeldige_rij = maak_onbekende_ongeldige_dimensie(df=df,naam_bk=naam_bk, naam_sid=naam_sid, onbekend_ongeldig="ongeldig")
+    onbekende_rij = maak_onbekende_ongeldige_dimensie(df=target_df,naam_bk=naam_bk, naam_sid=naam_sid)
+    ongeldige_rij = maak_onbekende_ongeldige_dimensie(df=target_df,naam_bk=naam_bk, naam_sid=naam_sid, onbekend_ongeldig="ongeldig")
 
     #Onderstaande volgorde in de union is belangrijk te behouden, zodat ongeldig en onbekend altijd -2 en -1 waardes krijgen in de sid.
     df = ongeldige_rij.union(onbekende_rij)
@@ -276,6 +276,7 @@ def insert_onbekend_ongeldig_records(spark, target_table: str, m_metadata: List,
         df.write.insertInto(target_table)
     except Exception as e:
         logger.error(f"Error writing to table {target_table}: {e}")
+        raise
 
 def run_dimensions(spark,
                    df: DataFrame, 
