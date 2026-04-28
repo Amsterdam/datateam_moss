@@ -317,3 +317,4 @@ def run_dimensions(spark,
 
     except Exception as e:
         logger.error(f"Onverwachte fout bij het laden van data voor tabel {target_table}: {e}")
+        raise
