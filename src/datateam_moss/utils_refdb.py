@@ -1,3 +1,32 @@
+def drop_objecten_in_schema(catalog: str, schema: str):
+    """
+    Verwijdert alle tabellen en views binnen een opgegeven schema in een catalog.
+
+    Deze functie haalt alle objecten (tabellen en views) op via de 
+    information_schema en verwijdert deze één voor één. Views worden verwijderd 
+    met `DROP VIEW` en tabellen met `DROP TABLE`.
+
+    Parameters
+    ----------
+    catalog : str
+        De naam van de catalog waarin het schema zich bevindt.
+    schema : str
+        De naam van het schema waarvan alle objecten verwijderd moeten worden.
+    """
+
+    objects = spark.sql(f"""
+        SELECT table_name, table_type
+        FROM `{catalog}`.information_schema.tables
+        WHERE table_schema = '{schema}'
+    """).collect()
+
+    for obj in objects:
+        name = obj.table_name
+        if obj.table_type == 'VIEW':
+            spark.sql(f"DROP VIEW `{catalog}`.`{schema}`.`{name}`")
+        else:
+            spark.sql(f"DROP TABLE `{catalog}`.`{schema}`.`{name}`")
+
 def schrijf_tabel_naar_refdb(pad_unity_catalog: str, pad_refdb: str,driver: str,user: str,password: str,url: str):
     '''
     Schrijft een individuele tabel weg naar de Referentiedatabase
