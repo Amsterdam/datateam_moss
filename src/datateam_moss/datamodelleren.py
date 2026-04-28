@@ -273,7 +273,11 @@ def insert_onbekend_ongeldig_records(spark, target_table: str, m_metadata: List,
     df = df.select(*target_cols)
 
     try:
+        logger.info(f"Insert onbekend en ongeldig records in {target_table}.")
+
         df.write.insertInto(target_table)
+
+        logger.info(f"Insert onbekend en ongeldig records succesvol.")
     except Exception as e:
         logger.error(f"Error writing to table {target_table}: {e}")
         raise
@@ -303,18 +307,16 @@ def run_dimensions(spark,
         raise ValueError("De target_table is niet opgegeven.")
 
     try:
+        # Vul metadata kolommen
+        df = siu.add_metadata_columns_to_dataframe(df=df, m_columns=m_metadata, runtime=runtime, bron=m_bron)
+        # Schrijf df weg naar tabel
         siu.write_to_table(df=df, target_table=target_table)
-
-        logger.info(f"Insert onbekend en ongeldig records in {target_table}.")
-
+        # Voeg onbekend en ongeldige rijen toe
         insert_onbekend_ongeldig_records(spark=spark,
                                     target_table=target_table,
                                     runtime=runtime,
                                     m_metadata=m_metadata,
                                     m_bron=m_bron)
-        
-        logger.info(f"Insert onbekend en ongeldig records succesvol.")
-
     except Exception as e:
         logger.error(f"Onverwachte fout bij het laden van data voor tabel {target_table}: {e}")
         raise
