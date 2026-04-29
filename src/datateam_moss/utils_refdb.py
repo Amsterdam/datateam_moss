@@ -1,6 +1,8 @@
 from typing import List
+from pyspark.sql import SparkSession
 from datateam_moss.logger import get_logger
 
+spark = SparkSession.builder.getOrCreate()
 logger = get_logger("__utils_refdb__")
 
 def drop_objecten_in_schema(catalog: str, schema: str):
