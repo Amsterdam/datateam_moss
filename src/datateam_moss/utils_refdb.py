@@ -1,9 +1,10 @@
 from typing import List
+from pyspark.sql import SparkSession
 from datateam_moss.logger import get_logger
 
 logger = get_logger("__utils_refdb__")
 
-def drop_objecten_in_schema(catalog: str, schema: str):
+def drop_objecten_in_schema(spark: SparkSession, catalog: str, schema: str):
     """
     Verwijdert alle tabellen en views binnen een opgegeven schema in een catalog.
 
@@ -32,7 +33,7 @@ def drop_objecten_in_schema(catalog: str, schema: str):
         else:
             spark.sql(f"DROP TABLE `{catalog}`.`{schema}`.`{name}`")
 
-def schrijf_tabel_naar_refdb(pad_unity_catalog: str, pad_refdb: str,driver: str,user: str,password: str,url: str):
+def schrijf_tabel_naar_refdb(spark: SparkSession,pad_unity_catalog: str, pad_refdb: str,driver: str,user: str,password: str,url: str):
     '''
     Schrijft een individuele tabel weg naar de Referentiedatabase
     args:
@@ -63,7 +64,7 @@ def schrijf_tabel_naar_refdb(pad_unity_catalog: str, pad_refdb: str,driver: str,
         logger.error(f"Pipeline gestopt bij {pad_unity_catalog} → {pad_refdb}: {e}")
         raise
 
-def schrijf_dataset_naar_refdb(catalog: str, schema_unity_catalog: str, driver: str, user: str, password: str, url: str, tabellen: List=None) -> None:
+def schrijf_dataset_naar_refdb(spark: SparkSession, catalog: str, schema_unity_catalog: str, driver: str, user: str, password: str, url: str, tabellen: List=None) -> None:
     '''
     Schrijft alle tabellen in een schema naar de Referentiedatabase, of neemt een selectie indien een list is opgegeven. Het wegschrijven is beperkt tot het schema 'public' in de Referentiedatabase
 
@@ -83,7 +84,8 @@ def schrijf_dataset_naar_refdb(catalog: str, schema_unity_catalog: str, driver: 
     for naam in tabel_namen:
         pad_unity_catalog = f"{catalog}.{schema_unity_catalog}.{naam}"
         pad_refdb = f"public.{naam}"
-        schrijf_tabel_naar_refdb(pad_unity_catalog,
+        schrijf_tabel_naar_refdb(spark,
+                                 pad_unity_catalog,
                                  pad_refdb,
                                  driver=driver,
                                  user=user,
