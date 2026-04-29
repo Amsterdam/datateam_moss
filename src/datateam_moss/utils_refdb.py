@@ -1,3 +1,8 @@
+from typing import List
+from datateam_moss.logger import get_logger
+
+logger = get_logger("__utils_refdb__")
+
 def drop_objecten_in_schema(catalog: str, schema: str):
     """
     Verwijdert alle tabellen en views binnen een opgegeven schema in een catalog.
@@ -37,6 +42,7 @@ def schrijf_tabel_naar_refdb(pad_unity_catalog: str, pad_refdb: str,driver: str,
         pad naar tabel in RefDB
     '''
     try:
+        logger.info(f"Probeer {pad_unity_catalog} naar {pad_refdb} weg te schrijven")
         df = spark.table(pad_unity_catalog)
         (df 
             .write 
@@ -51,11 +57,11 @@ def schrijf_tabel_naar_refdb(pad_unity_catalog: str, pad_refdb: str,driver: str,
             .option("dbtable", pad_refdb) 
             .mode("overwrite") 
             .save())
+        logger.info(f"{pad_unity_catalog} succesvol weggeschreven naar {pad_refdb}")
 
     except Exception as e:
-        raise RuntimeError(
-            f"Pipeline gestopt bij {pad_unity_catalog} → {pad_refdb}: {e}"
-        )
+        logger.error(f"Pipeline gestopt bij {pad_unity_catalog} → {pad_refdb}: {e}")
+        raise
 
 def schrijf_dataset_naar_refdb(catalog: str, schema_unity_catalog: str, driver: str, user: str, password: str, url: str, tabellen: List=None) -> None:
     '''
@@ -83,6 +89,3 @@ def schrijf_dataset_naar_refdb(catalog: str, schema_unity_catalog: str, driver: 
                                  user=user,
                                  password=password,
                                  url=url)
-
-        if catalog.endswith('dev'):
-            print(f"Tabel {pad_unity_catalog} naar {pad_refdb} weggeschreven")
