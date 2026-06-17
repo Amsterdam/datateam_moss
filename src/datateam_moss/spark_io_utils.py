@@ -438,3 +438,21 @@ def write_to_table(
     except Exception as e:
         logger.error(f"Fout bij het schrijven naar tabel {target_table}: {e}")
         raise  # Laat de fout opnieuw opgooien om de pipeline te laten stoppen
+
+def get_columns_by_type(
+    table_schema: Dict[str, Any],
+    spark_type_name: str,
+) -> List[str]:
+    """
+    Haal alle kolomnamen uit het schema op die overeenkomen met het opgegeven Spark-type.
+
+    Args:
+        table_schema: Definitie van het tabelschema met een collectie van kolommen.
+        spark_type_name: Naam van het Spark-type waarop gefilterd wordt
+            (bijvoorbeeld ``"DateType()"``).
+    """
+    return [
+        c["name"]
+        for c in table_schema.get("columns", [])
+        if c["type"] == spark_type_name
+    ]

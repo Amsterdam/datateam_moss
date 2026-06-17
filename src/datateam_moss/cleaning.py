@@ -1,6 +1,7 @@
 # Databricks notebook source
 from datateam_moss.logger import get_logger
 from datateam_moss import spark_io_utils as siu
+from datateam_moss.transform_context import TransformContext
 
 from databricks.sdk.runtime import *
 from pyspark.sql import functions as F
@@ -284,4 +285,203 @@ def cleanse_and_prep_dataframe(df: DataFrame, table_schema: Dict, m_columns: Lis
 
     df = cast_columns_from_schema(df=df, table_schema=table_schema)
         
+    return df
+
+def cast_columns_to_booleans(df: DataFrame, ctx: TransformContext) -> DataFrame:
+    """
+    Converteer alle geconfigureerde boolean-kolommen naar een Databricks-compatibel formaat.
+
+    Args:
+        df: Het bron DataFrame.
+        ctx: De transformatie-context met schema-informatie.
+    """
+    for column in siu.get_columns_by_type(
+        ctx.table_schema,
+        "BooleanType()",
+    ):
+        if column in df.columns:
+            df = df.withColumn(
+                column,
+                to_databricks_boolean_column(column),
+            )
+
+    return df
+
+def cast_columns_to_dates(df: DataFrame, ctx: TransformContext) -> DataFrame:
+    """
+    Parse en formatteer alle geconfigureerde datumkolommen.
+
+    Args:
+        df: Het bron DataFrame.
+        ctx: De transformatie-context met schema-informatie.
+
+    """
+    for column in siu.get_columns_by_type(ctx.table_schema,"DateType()"):
+            if column in df.columns:
+                try:
+                    df = df.withColumn(
+                        column,
+                        F.to_date(F.col(column), "yyyy-MM-dd")
+                    )
+
+                except Exception:
+                    try:
+                        df = parse_and_format_date(
+                            df=df,
+                            date_column=column,
+                            output_format=ctx.date_output_format
+                        )
+
+                    except Exception as e:
+                        logger.warning(
+                            f"Kon datumkolom '{column}' niet converteren: {e}"
+                        )
+
+    return df
+
+
+
+def cast_columns_to_timestamp(
+    df: DataFrame,
+    ctx: TransformContext,
+) -> DataFrame:
+    """
+    Converteer timestamp-kolommen van een ISO-8601 tekenreeks naar een Spark timestamp.
+
+    Args:
+        df: Het bron DataFrame.
+        ctx: De transformatie-context met schema-informatie.
+    """
+    for column in siu.get_columns_by_type(
+        ctx.table_schema,
+        "TimestampType()",
+    ):
+        if column in df.columns:
+            df = df.withColumn(
+                column,
+                F.to_timestamp(
+                    F.col(column),
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                ),
+            )
+
+    return df
+
+
+def convert_columns_to_dutch_timezone(
+    df: DataFrame,
+    ctx: TransformContext,
+) -> DataFrame:
+    """
+    Zet UTC-timestamps om naar de Nederlandse tijdzone (Europe/Amsterdam).
+
+    Args:
+        df: Het bron DataFrame.
+        ctx: De transformatie-context met schema-informatie.
+    """
+    for column in siu.get_columns_by_type(
+        ctx.table_schema,
+        "TimestampType()",
+    ):
+        if column in df.columns:
+            df = df.withColumn(
+                column,
+                F.from_utc_timestamp(
+                    F.col(column),
+                    "Europe/Amsterdam",
+                ),
+            )
+
+    return df
+
+
+def cast_string_columns_to_decimal_to_integer(
+    df: DataFrame,
+    ctx: TransformContext,
+) -> DataFrame:
+    """
+    Converteer integer-kolommen via een tussenstap naar Decimal en vervolgens naar Integer.
+
+    Dit wordt gebruikt wanneer numerieke waarden als tekenreeks worden aangeleverd.
+
+    Args:
+        df: Het bron DataFrame.
+        ctx: De transformatie-context met schema-informatie.
+    """
+    for column in siu.get_columns_by_type(
+        ctx.table_schema,
+        "IntegerType()",
+    ):
+        if column in df.columns:
+            df = df.withColumn(
+                column,
+                F.col(column)
+                .cast(DecimalType(10, 0))
+                .cast(IntegerType()),
+            )
+
+    return df
+  
+def cast_columns_to_decimal(
+    df: DataFrame,
+    ctx: TransformContext,
+) -> DataFrame:
+    """
+    Converteer alle geconfigureerde decimale kolommen naar het gewenste datatype.
+
+    Args:
+        df: Het bron DataFrame.
+        ctx: De transformatie-context met schema-informatie.
+    """
+    for column_def in ctx.table_schema.get("columns", []):
+        column_type = column_def.get("type")
+        column_name = column_def.get("name")
+
+        if not column_type.startswith("DecimalType"):
+            continue
+
+        if column_name not in df.columns:
+            continue
+
+        spark_type = siu._parse_spark_type(column_type)
+
+        if ctx.translate_comma_to_dot:
+            df = df.withColumn(column_name, F.translate(F.col(column_name), ",", "."))
+
+        df = df.withColumn(column_name, F.col(column_name).cast(spark_type))
+
+    return df
+
+def cast_schema(
+    df: DataFrame,
+    ctx: TransformContext) -> DataFrame:
+    """
+    Converteer alle kolommen naar het type dat is opgegeven in het schema.
+
+    Args:
+        df: Het bron DataFrame.
+        ctx: De transformatie-context met schema-informatie.
+    """
+
+    return cast_columns_from_schema(df=df, table_schema=ctx.table_schema)
+
+def run_cleansing_transformations(
+    df: DataFrame,
+    ctx: TransformContext,
+    transformations: List[Callable[[DataFrame, TransformContext], DataFrame]],
+) -> DataFrame:
+    """
+    Voer alle transformaties uit die onderdeel zijn van de ETL-pijplijn.
+
+    Args:
+        df: Het bron DataFrame.
+        ctx: De transformatie-context.
+        pipeline: Geordende lijst met transformatiefuncties.
+
+    Returns:
+        Het getransformeerde DataFrame nadat alle stappen zijn uitgevoerd.
+    """
+    for transformation in transformations:
+        df = transformation(df, ctx)
+
     return df
