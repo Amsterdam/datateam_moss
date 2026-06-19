@@ -214,6 +214,7 @@ def cast_columns_from_schema(df: DataFrame, table_schema: Dict[str, Any]) -> Dat
     
     return df
 
+#DEPRECATED, gebruik run_cleansing_transformations
 def cleanse_and_prep_dataframe(df: DataFrame, table_schema: Dict, m_columns: List[str], runtime: datetime, rename_columns:List = None ) -> DataFrame:
     """
     Leest data uit de bron tabel, plakt de extra records onderaan en schrijft deze weg naar de doeltabel.
@@ -299,11 +300,13 @@ def cast_columns_to_booleans(df: DataFrame, ctx: TransformContext) -> DataFrame:
         ctx.table_schema,
         "BooleanType()",
     ):
-        if column in df.columns:
-            df = df.withColumn(
-                column,
-                to_databricks_boolean_column(column),
-            )
+        if column not in df.columns:
+            raise KeyError(f"Column '{column}' not found in DataFrame")
+        
+        df = df.withColumn(
+            column,
+            to_databricks_boolean_column(column),
+        )
 
     return df
 
@@ -317,25 +320,29 @@ def cast_columns_to_dates(df: DataFrame, ctx: TransformContext) -> DataFrame:
 
     """
     for column in siu.get_columns_by_type(ctx.table_schema,"DateType()"):
-            if column in df.columns:
-                try:
-                    df = df.withColumn(
-                        column,
-                        F.to_date(F.col(column), "yyyy-MM-dd")
-                    )
 
-                except Exception:
-                    try:
-                        df = parse_and_format_date(
-                            df=df,
-                            date_column=column,
-                            output_format=ctx.date_output_format
-                        )
+        if column not in df.columns:
+            raise KeyError(f"Column '{column}' not found in DataFrame")
+        
+        try:
+            df = df.withColumn(
+                column,
+                F.to_date(F.col(column), "yyyy-MM-dd")
+            )
 
-                    except Exception as e:
-                        logger.warning(
-                            f"Kon datumkolom '{column}' niet converteren: {e}"
-                        )
+        except Exception:
+            try:
+                df = parse_and_format_date(
+                    df=df,
+                    date_column=column,
+                    output_format=ctx.date_output_format
+                )
+
+            except Exception as e:
+                raise e
+                logger.error(
+                    f"Kon datumkolom '{column}' niet converteren: {e}"
+                )
 
     return df
 
@@ -356,14 +363,16 @@ def cast_columns_to_timestamp(
         ctx.table_schema,
         "TimestampType()",
     ):
-        if column in df.columns:
-            df = df.withColumn(
-                column,
-                F.to_timestamp(
-                    F.col(column),
-                    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-                ),
-            )
+        if column not in df.columns:
+            raise KeyError(f"Column '{column}' not found in DataFrame")
+        
+        df = df.withColumn(
+            column,
+            F.to_timestamp(
+                F.col(column),
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            ),
+        )
 
     return df
 
@@ -383,14 +392,16 @@ def convert_columns_to_dutch_timezone(
         ctx.table_schema,
         "TimestampType()",
     ):
-        if column in df.columns:
-            df = df.withColumn(
-                column,
-                F.from_utc_timestamp(
-                    F.col(column),
-                    "Europe/Amsterdam",
-                ),
-            )
+        if column not in df.columns:
+            raise KeyError(f"Column '{column}' not found in DataFrame")
+        
+        df = df.withColumn(
+            column,
+            F.from_utc_timestamp(
+                F.col(column),
+                "Europe/Amsterdam",
+            ),
+        )
 
     return df
 
@@ -412,13 +423,15 @@ def cast_string_columns_to_decimal_to_integer(
         ctx.table_schema,
         "IntegerType()",
     ):
-        if column in df.columns:
-            df = df.withColumn(
-                column,
-                F.col(column)
-                .cast(DecimalType(10, 0))
-                .cast(IntegerType()),
-            )
+        if column not in df.columns:
+            raise KeyError(f"Column '{column}' not found in DataFrame")
+        
+        df = df.withColumn(
+            column,
+            F.col(column)
+            .cast(DecimalType(10, 0))
+            .cast(IntegerType()),
+        )
 
     return df
   
@@ -441,7 +454,7 @@ def cast_columns_to_decimal(
             continue
 
         if column_name not in df.columns:
-            continue
+            raise KeyError(f"Column '{column_name}' not found in DataFrame")
 
         spark_type = siu._parse_spark_type(column_type)
 
@@ -476,7 +489,7 @@ def run_cleansing_transformations(
     Args:
         df: Het bron DataFrame.
         ctx: De transformatie-context.
-        pipeline: Geordende lijst met transformatiefuncties.
+        transformations: Geordende lijst met transformatiefuncties.
 
     Returns:
         Het getransformeerde DataFrame nadat alle stappen zijn uitgevoerd.
