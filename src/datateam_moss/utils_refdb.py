@@ -80,14 +80,34 @@ def schrijf_dataset_naar_refdb(spark: SparkSession, catalog: str, schema_unity_c
         tabel_namen = [t.name for t in spark.catalog.listTables(schema_unity_catalog)]
     else:
         tabel_namen = tabellen
-
+        
+    # Maak eerst een list van errors, zodat alle tabellen geprobeerd worden alvorens een exception wordt geraised
+    errors = []
+    
     for naam in tabel_namen:
         pad_unity_catalog = f"{catalog}.{schema_unity_catalog}.{naam}"
         pad_refdb = f"public.{naam}"
-        schrijf_tabel_naar_refdb(spark,
-                                 pad_unity_catalog,
-                                 pad_refdb,
-                                 driver=driver,
-                                 user=user,
-                                 password=password,
-                                 url=url)
+        try:
+            schrijf_tabel_naar_refdb(spark,
+                                     pad_unity_catalog,
+                                     pad_refdb,
+                                     driver=driver,
+                                     user=user,
+                                     password=password,
+                                     url=url)
+        except Exception as e:
+            logger.exception(
+                f"Wegschrijven mislukt voor {pad_unity_catalog} → {pad_refdb}"
+            )
+    
+            errors.append(
+                RuntimeError(
+                    f"{pad_unity_catalog} → {pad_refdb} is mislukt"
+                )
+            )
+    
+    if errors:
+        raise ExceptionGroup(
+            "Eén of meer tabellen konden niet worden weggeschreven naar de RefDB",
+            errors
+        )
