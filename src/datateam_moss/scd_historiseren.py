@@ -8,7 +8,7 @@ from pyspark.sql.types import *
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.window import Window
 from functools import reduce
-# spark = SparkSession.builder.getOrCreate()
+spark = SparkSession.builder.getOrCreate()
 import time
 import re
 
@@ -65,7 +65,6 @@ def restore_table_with_retry(
     Raises:
         Exception: If the restore fails after the maximum number of retries or if an unexpected error occurs.
     """
-    spark = SparkSession.builder.getOrCreate()
 
     retries = 0
     while retries < max_retries:
@@ -114,7 +113,6 @@ def perform_scd2_merge(
         insert_columns (Dict[str, str]): Columns to insert when no match occurs.
         close_deleted_records (bool, optional): Whether to close old records when no match occurs in the source. Defaults to False.
     """
-    spark = SparkSession.builder.getOrCreate()
 
     # Validate that the combination of source merge columns is unique
     validate_merge_columns(source_df, merge_condition)
@@ -248,7 +246,6 @@ def generate_history_table_script(spark , catalog_schema: str, source_table_name
     Returns:
         str: The generated CREATE TABLE SQL statement.
     """
-    spark = SparkSession.builder.getOrCreate()
 
     # Stap 1 Volledige naam van de bron-tabel
     full_source_table_name = f"{catalog_schema}.{source_table_name}"

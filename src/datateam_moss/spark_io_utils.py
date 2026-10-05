@@ -355,6 +355,15 @@ def add_new_columns_to_table(spark: SparkSession, full_table_name: str, table_de
         spark.sql(query)
         logger.info(f"Added columns {added_columns} to table {full_table_name}")
 
+        
+def create_or_update_table(spark: SparkSession, full_table_name: str, table_definition: dict) -> None:
+    """Maakt de tabel aan als hij nog niet bestaat, en voegt anders
+    ontbrekende kolommen uit de definitie toe."""
+    if spark.catalog.tableExists(full_table_name):
+        add_new_columns_to_table(spark, full_table_name, table_definition)
+    else:
+        create_table_from_ddl(spark, full_table_name, table_definition)
+
 
 def create_stringtype_dataframe_from_list(spark, data: List) -> DataFrame:
     """

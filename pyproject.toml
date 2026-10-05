@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "datateam_moss"
-version = "0.2.25"
+version = "0.2.26"
 description = "Functions needed for datateam MOSS (municipality of Amsterdam)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,5 +30,6 @@ testpaths = ["tests"]
 dev = [
   "databricks-sdk",
     "pytest>=7.4.4",
-    "pyspark==3.5.2"
+    "pyspark==3.5.2",
+    "delta-spark>=3.2,<3.4",
 ]

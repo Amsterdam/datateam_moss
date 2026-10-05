@@ -1,7 +1,7 @@
 import pyspark.sql.functions as F
 from pyspark.sql import SparkSession, DataFrame
 
-# spark = SparkSession.builder.getOrCreate()
+spark = SparkSession.builder.getOrCreate()
 
 
 # Functie om kolommen te versleutelen met AES
@@ -88,7 +88,6 @@ def add_databricks_mask_function(
         ValueError: If neither `groups_with_access` nor `spns_with_access` is provided.
 
     """
-    spark = SparkSession.builder.getOrCreate()
     access_conditions = []
 
     if groups_with_access:
@@ -134,7 +133,6 @@ def apply_databricks_mask_function_to_column(catalog: str, schema: str, policy_s
     Returns:
         None
     """
-    spark = SparkSession.builder.getOrCreate()
 
     sql_command = f"""
         ALTER TABLE {catalog}.{schema}.{table}

@@ -8,7 +8,7 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 from datateam_moss import spark_io_utils
 
 @pytest.fixture
-def numerieke_data():
+def numeric_data():
     return [
         {"id": 1, "price": 99.5},
         {"id": 2, "price": 100.0},
@@ -37,8 +37,8 @@ def test_create_stringtype_dataframe_from_list_basic(spark):
     assert result[1]["age"] == "25"
 
 
-def test_create_stringtype_dataframe_from_list_string_conversion(spark, numerieke_data):
-    df = spark_io_utils.create_stringtype_dataframe_from_list(spark, numerieke_data)
+def test_create_stringtype_dataframe_from_list_string_conversion(spark, numeric_data):
+    df = spark_io_utils.create_stringtype_dataframe_from_list(spark, numeric_data)
 
     # alles moet strings worden
     result = df.collect()
@@ -47,22 +47,22 @@ def test_create_stringtype_dataframe_from_list_string_conversion(spark, numeriek
 
 
 @pytest.mark.parametrize(
-    "data, verwachte_fout",
+    "data, expected_error",
     [
         ([], ValueError),   # lege lijst
         ({}, TypeError),    # geen lijst
     ],
     ids=["empty_list", "no_list"],
 )
-def test_create_stringtype_dataframe_from_list_ongeldige_input(spark, data, verwachte_fout):
-    with pytest.raises(verwachte_fout):
+def test_create_stringtype_dataframe_from_list_wrong_input(spark, data, expected_error):
+    with pytest.raises(expected_error):
         spark_io_utils.create_stringtype_dataframe_from_list(spark, data)
 
 
 # --- add_metadata_columns_to_dataframe ---
 
-def test_add_metadata_columns_to_dataframe_check_type(spark, numerieke_data):
-    df = spark.createDataFrame(data=numerieke_data, schema=["id", "price"])
+def test_add_metadata_columns_to_dataframe_check_type(spark, numeric_data):
+    df = spark.createDataFrame(data=numeric_data, schema=["id", "price"])
 
     with pytest.raises(TypeError):
         spark_io_utils.add_metadata_columns_to_dataframe(
@@ -70,8 +70,8 @@ def test_add_metadata_columns_to_dataframe_check_type(spark, numerieke_data):
         )
 
 
-def test_add_metadata_columns_to_dataframe_runtime_and_timestamps(spark, numerieke_data):
-    df = spark.createDataFrame(data=numerieke_data, schema=["id", "price"])
+def test_add_metadata_columns_to_dataframe_runtime_and_timestamps(spark, numeric_data):
+    df = spark.createDataFrame(data=numeric_data, schema=["id", "price"])
     runtime = datetime(2023, 5, 10, 8, 45)
 
     result = spark_io_utils.add_metadata_columns_to_dataframe(
@@ -82,13 +82,13 @@ def test_add_metadata_columns_to_dataframe_runtime_and_timestamps(spark, numerie
     first_row = result.first()
     assert str(first_row["m_aangemaakt_op"]).startswith("2023-05-10 08:45")
 
-def maak_spark_mock(bestaand_schema: StructType) -> MagicMock:
+def create_spark_mock_with_schema(existing_schema: StructType) -> MagicMock:
     spark = MagicMock()
-    spark.table.return_value.schema = bestaand_schema
+    spark.table.return_value.schema = existing_schema
     return spark
 
-def test_voegt_ontbrekende_kolom_toe_na_vorige_kolom():
-    spark = maak_spark_mock(StructType([
+def test_add_new_columns_to_table_adds_missing_col_after_previous_col():
+    spark = create_spark_mock_with_schema(StructType([
         StructField("id", IntegerType()),
         StructField("naam", StringType()),
     ]))
@@ -98,7 +98,7 @@ def test_voegt_ontbrekende_kolom_toe_na_vorige_kolom():
         {"name": "naam", "type": "StringType()"},
     ]}
 
-    add_new_column_to_table(spark, "db.klanten", definitie)
+    spark_io_utils.add_new_columns_to_table(spark, "db.klanten", definitie)
 
     spark.sql.assert_called_once()
     query = spark.sql.call_args.args[0]
@@ -106,27 +106,65 @@ def test_voegt_ontbrekende_kolom_toe_na_vorige_kolom():
     assert "`email` string AFTER `id`" in query
 
 
-def test_eerste_kolom_krijgt_first():
-    spark = maak_spark_mock(StructType([StructField("naam", StringType())]))
+def test_add_new_columns_to_table_first_col_gets_first():
+    spark = create_spark_mock_with_schema(StructType([StructField("naam", StringType())]))
     definitie = {"columns": [
         {"name": "id", "type": "IntegerType()"},
         {"name": "naam", "type": "StringType()"},
     ]}
 
-    add_new_column_to_table(spark, "db.klanten", definitie)
+    spark_io_utils.add_new_columns_to_table(spark, "db.klanten", definitie)
 
     assert "`id` int FIRST" in spark.sql.call_args.args[0]
 
 
-def test_niets_te_doen_geen_alter_table():
-    spark = maak_spark_mock(StructType([StructField("id", IntegerType())]))
-    definitie = {"columns": [{"name": "ID", "type": "IntegerType()"}]}  # hoofdletterongevoelig
+def test_add_new_columns_to_table_nothing_to_add():
+    spark = create_spark_mock_with_schema(StructType([StructField("id", IntegerType())]))
+    definitie = {"columns": [{"name": "id", "type": "IntegerType()"}]}  # hoofdletterongevoelig
 
-    add_new_column_to_table(spark, "db.klanten", definitie)
+    spark_io_utils.add_new_columns_to_table(spark, "db.klanten", definitie)
 
     spark.sql.assert_not_called()
 
+@pytest.fixture
+def mocked_functions(monkeypatch):
+    """Vervangt de twee onderliggende functies door mocks, zodat we alleen
+    de beslislogica van create_or_update_table testen."""
+    create_mock = MagicMock()
+    add_mock = MagicMock()
+    monkeypatch.setattr(spark_io_utils, "create_table_from_ddl", create_mock)
+    monkeypatch.setattr(spark_io_utils, "add_new_columns_to_table", add_mock)
+    return create_mock, add_mock
 
-# if __name__ == '__main__':
-#     import sys
-#     unittest.main(argv=['first-arg-is-ignored'], exit=False)
+
+@pytest.fixture
+def table_definition():
+    return {"columns": [{"name": "id", "type": "IntegerType()"}]}
+
+
+def create_spark_mock_with_table_exists(table_exists: bool) -> MagicMock:
+    spark = MagicMock()
+    spark.catalog.tableExists.return_value = table_exists
+    return spark
+
+
+def test_create_or_update_table_create_table_if_not_exists(mocked_functions, table_definition):
+    create_mock, add_mock = mocked_functions
+    spark = create_spark_mock_with_table_exists(table_exists=False)
+
+    spark_io_utils.create_or_update_table(spark, "db.klanten", table_definition)
+
+    spark.catalog.tableExists.assert_called_once_with("db.klanten")
+    create_mock.assert_called_once_with(spark, "db.klanten", table_definition)
+    add_mock.assert_not_called()
+
+
+def test_create_or_update_table_add_columns_if_table_exists(mocked_functions, table_definition):
+    create_mock, add_mock = mocked_functions
+    spark = create_spark_mock_with_table_exists(table_exists=True)
+
+    spark_io_utils.create_or_update_table(spark, "db.klanten", table_definition)
+
+    spark.catalog.tableExists.assert_called_once_with("db.klanten")
+    add_mock.assert_called_once_with(spark, "db.klanten", table_definition)
+    create_mock.assert_not_called()

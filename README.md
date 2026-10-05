@@ -79,3 +79,12 @@ Deze features staan op de backlog:
 - Een lijst van project prefixes ingeven
 - Project prefixen leeg laten, zodat de hele database (bv. zilveren laag) wordt uitgelezen
 """
+
+
+## Werkomgeving instellen voor VScode
+
+1. Installeer python 3.11. De nieuwste versie is nog niet compatibel met alle Databricks connect versies.
+2. Installeer de databricks extensie in VScode.
+3. Configureer de Databricks extensie met een access token, zodat de authenticatie automatisch geregeld wordt.
+4. Installeer een virtual env met python 3.11. `py -3.11 -m venv .venv` en activeer de venv met `.\.venv\Scripts\Activate.ps1`
+5. Installeer de dependencies met `pip install -e .` en vervolgens de dev gerelateerde depencies met `pip install --group dev`.
