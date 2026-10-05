@@ -13,8 +13,8 @@ from opentelemetry.sdk._logs import (
 from opentelemetry._logs import set_logger_provider, get_logger_provider
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 
-spark = SparkSession.builder.getOrCreate()
-dbutils = DBUtils(spark)
+# spark = SparkSession.builder.getOrCreate()
+# dbutils = DBUtils(spark)
 
 def get_logger(name: str,
                stream_log_format: str = '%(asctime)s - %(levelname)s - %(message)s',
@@ -42,6 +42,8 @@ def get_logger(name: str,
     logging.Logger
         The configured logger instance.
     """
+    spark = SparkSession.builder.getOrCreate()
+    dbutils = DBUtils(spark)
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
     logger.propagate = False  # prevent duplicate logs from root logger

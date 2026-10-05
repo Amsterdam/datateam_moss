@@ -1,12 +1,13 @@
-# Databricks notebook source
 import pytz
 from datetime import datetime
 from databricks.sdk.runtime import *
-from pyspark.sql.types import *
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql import functions as F
 from typing import *
 import re
+
+from pyspark.sql.types import *
+import pyspark.sql.types as T
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 
 from datateam_moss.logger import get_logger
 
@@ -327,6 +328,33 @@ def create_table_from_ddl(
     # Maak de tabel aan
     spark.sql(ddl)
     print(f"Tabel {full_table_name} is aangemaakt{' met SID' if genereer_sid else ''}.")
+
+
+def add_new_columns_to_table(spark: SparkSession, full_table_name: str, table_definition: dict) -> None:
+    """Voegt kolommen uit de definitie toe die nog niet in de tabel bestaan,
+    in één ALTER TABLE."""
+
+    existing_columns = {f.name.lower() for f in spark.table(full_table_name).schema.fields}
+    sql_clauses = []
+    added_columns = []
+    previous_column = None
+
+    # Bepaal de kolommen die nog niet bestaan en de positie die ze moeten krijgen.
+    for col in table_definition["columns"]:
+        name = col["name"]
+        if name.lower() not in existing_columns:
+            dtype = eval(col["type"], {"__builtins__": {}}, vars(T)).simpleString()
+            position = f"AFTER `{previous_column}`" if previous_column else "FIRST"
+            sql_clauses.append(f"`{name}` {dtype} {position}")
+            added_columns.append(name)
+        previous_column = name
+        
+    # Plak de sql clauses aan elkaar en voer alter table uit
+    if sql_clauses:
+        query = f"ALTER TABLE {full_table_name} ADD COLUMNS (\n  " + ",\n  ".join(sql_clauses) + "\n)"
+        spark.sql(query)
+        logger.info(f"Added columns {added_columns} to table {full_table_name}")
+
 
 def create_stringtype_dataframe_from_list(spark, data: List) -> DataFrame:
     """

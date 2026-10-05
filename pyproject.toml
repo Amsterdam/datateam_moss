@@ -8,9 +8,6 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "datateam_moss"
 version = "0.2.25"
-authors = [
-  { name="XX", email="x@x.nl" }
-]
 description = "Functions needed for datateam MOSS (municipality of Amsterdam)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,5 +18,17 @@ dependencies = [
   "opentelemetry-sdk==1.39.0",
   "azure-monitor-opentelemetry-exporter==1.0.0b46",
   "azure-mgmt-monitor==7.0.0",
-  "pandas==3.0.0"
+  "pandas==3.0.0",
+  "pytz"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+  "databricks-sdk",
+    "pytest>=7.4.4",
+    "pyspark==3.5.2"
 ]
