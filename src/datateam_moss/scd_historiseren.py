@@ -65,6 +65,7 @@ def restore_table_with_retry(
     Raises:
         Exception: If the restore fails after the maximum number of retries or if an unexpected error occurs.
     """
+
     retries = 0
     while retries < max_retries:
         try:

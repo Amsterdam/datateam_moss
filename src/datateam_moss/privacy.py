@@ -88,7 +88,6 @@ def add_databricks_mask_function(
         ValueError: If neither `groups_with_access` nor `spns_with_access` is provided.
 
     """
-
     access_conditions = []
 
     if groups_with_access:
