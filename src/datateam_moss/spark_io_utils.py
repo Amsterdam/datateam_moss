@@ -333,11 +333,17 @@ def create_table_from_ddl(
 def add_new_columns_to_table(spark: SparkSession, full_table_name: str, table_definition: dict) -> None:
     """Voegt kolommen uit de definitie toe die nog niet in de tabel bestaan,
     in één ALTER TABLE."""
+    existing_fields = spark.table(full_table_name).schema.fields
+    existing_columns = {f.name.lower() for f in existing_fields}
 
-    existing_columns = {f.name.lower() for f in spark.table(full_table_name).schema.fields}
+    # De SID-kolom staat niet in de definitie, maar moet wel vooraan blijven.
+    sid_column = next(
+        (f.name for f in existing_fields if f.name.lower().startswith("sid_")),
+        None,
+    )
     sql_clauses = []
     added_columns = []
-    previous_column = None
+    previous_column = sid_column
 
     # Bepaal de kolommen die nog niet bestaan en de positie die ze moeten krijgen.
     for col in table_definition["columns"]:
@@ -356,13 +362,18 @@ def add_new_columns_to_table(spark: SparkSession, full_table_name: str, table_de
         logger.info(f"Added columns {added_columns} to table {full_table_name}")
 
         
-def create_or_update_table(spark: SparkSession, full_table_name: str, table_definition: dict) -> None:
+def create_or_update_table(spark: SparkSession, full_table_name: str, table_definition: dict, genereer_sid: bool = False) -> None:
     """Maakt de tabel aan als hij nog niet bestaat, en voegt anders
     ontbrekende kolommen uit de definitie toe."""
     if spark.catalog.tableExists(full_table_name):
-        add_new_columns_to_table(spark, full_table_name, table_definition)
+        add_new_columns_to_table(spark=spark, 
+                                 full_table_name=full_table_name, 
+                                 table_definition=table_definition)
     else:
-        create_table_from_ddl(spark, full_table_name, table_definition)
+        create_table_from_ddl(spark=spark, 
+                              full_table_name=full_table_name, 
+                              table_definition=table_definition, 
+                              genereer_sid=genereer_sid)
 
 
 def create_stringtype_dataframe_from_list(spark, data: List) -> DataFrame:
