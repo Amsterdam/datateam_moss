@@ -3,7 +3,7 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, LongType
 
 from datateam_moss import spark_io_utils
 
@@ -82,10 +82,20 @@ def test_add_metadata_columns_to_dataframe_runtime_and_timestamps(spark, numeric
     first_row = result.first()
     assert str(first_row["m_aangemaakt_op"]).startswith("2023-05-10 08:45")
 
+
 def create_spark_mock_with_schema(existing_schema: StructType) -> MagicMock:
     spark = MagicMock()
     spark.table.return_value.schema = existing_schema
     return spark
+
+
+def create_spark_mock_with_table_exists(table_exists: bool) -> MagicMock:
+    spark = MagicMock()
+    spark.catalog.tableExists.return_value = table_exists
+    return spark
+
+
+# --- add_new_columns_to_table ---
 
 def test_add_new_columns_to_table_adds_missing_col_after_previous_col():
     spark = create_spark_mock_with_schema(StructType([
@@ -100,10 +110,9 @@ def test_add_new_columns_to_table_adds_missing_col_after_previous_col():
 
     spark_io_utils.add_new_columns_to_table(spark, "db.klanten", definitie)
 
-    spark.sql.assert_called_once()
-    query = spark.sql.call_args.args[0]
-    assert "ALTER TABLE db.klanten ADD COLUMNS" in query
-    assert "`email` string AFTER `id`" in query
+    spark.sql.assert_called_once_with(
+        "ALTER TABLE db.klanten ADD COLUMNS (\n  `email` string AFTER `id`\n)"
+    )
 
 
 def test_add_new_columns_to_table_first_col_gets_first():
@@ -115,16 +124,65 @@ def test_add_new_columns_to_table_first_col_gets_first():
 
     spark_io_utils.add_new_columns_to_table(spark, "db.klanten", definitie)
 
-    assert "`id` int FIRST" in spark.sql.call_args.args[0]
+    spark.sql.assert_called_once_with(
+        "ALTER TABLE db.klanten ADD COLUMNS (\n  `id` int FIRST\n)"
+    )
+
+
+def test_add_new_columns_to_table_first_col_after_sid():
+    spark = create_spark_mock_with_schema(StructType([
+        StructField("sid_klanten", LongType()),
+        StructField("naam", StringType()),
+    ]))
+    definitie = {"columns": [
+        {"name": "id", "type": "IntegerType()"},
+        {"name": "naam", "type": "StringType()"},
+    ]}
+
+    spark_io_utils.add_new_columns_to_table(spark, "db.klanten", definitie)
+
+    spark.sql.assert_called_once_with(
+        "ALTER TABLE db.klanten ADD COLUMNS (\n  `id` int AFTER `sid_klanten`\n)"
+    )
+
+
+def test_add_new_columns_to_table_multiple_cols():
+    spark = create_spark_mock_with_schema(StructType([StructField("id", IntegerType())]))
+    definitie = {"columns": [
+        {"name": "id", "type": "IntegerType()"},
+        {"name": "naam", "type": "StringType()"},
+        {"name": "email", "type": "StringType()"},
+    ]}
+
+    spark_io_utils.add_new_columns_to_table(spark, "db.klanten", definitie)
+
+    spark.sql.assert_called_once_with(
+        "ALTER TABLE db.klanten ADD COLUMNS (\n"
+        "  `naam` string AFTER `id`,\n"
+        "  `email` string AFTER `naam`\n"
+        ")"
+    )
 
 
 def test_add_new_columns_to_table_nothing_to_add():
     spark = create_spark_mock_with_schema(StructType([StructField("id", IntegerType())]))
-    definitie = {"columns": [{"name": "id", "type": "IntegerType()"}]}  # hoofdletterongevoelig
+    definitie = {"columns": [{"name": "id", "type": "IntegerType()"}]}
 
     spark_io_utils.add_new_columns_to_table(spark, "db.klanten", definitie)
 
     spark.sql.assert_not_called()
+
+
+def test_add_new_columns_to_table_case_insensitive():
+    spark = create_spark_mock_with_schema(StructType([StructField("id", IntegerType())]))
+    definitie = {"columns": [{"name": "ID", "type": "IntegerType()"}]}
+
+    spark_io_utils.add_new_columns_to_table(spark, "db.klanten", definitie)
+
+    spark.sql.assert_not_called()
+
+
+# --- create_or_update_table ---
 
 @pytest.fixture
 def mocked_functions(monkeypatch):
@@ -142,29 +200,48 @@ def table_definition():
     return {"columns": [{"name": "id", "type": "IntegerType()"}]}
 
 
-def create_spark_mock_with_table_exists(table_exists: bool) -> MagicMock:
-    spark = MagicMock()
-    spark.catalog.tableExists.return_value = table_exists
-    return spark
-
-
-def test_create_or_update_table_create_table_if_not_exists(mocked_functions, table_definition):
+@pytest.mark.parametrize("genereer_sid", [False, True])
+def test_create_or_update_table_creates_table_if_not_exists(
+    mocked_functions, table_definition, genereer_sid
+):
     create_mock, add_mock = mocked_functions
+    spark = create_spark_mock_with_table_exists(table_exists=False)
+
+    spark_io_utils.create_or_update_table(
+        spark, "db.klanten", table_definition, genereer_sid=genereer_sid
+    )
+
+    spark.catalog.tableExists.assert_called_once_with("db.klanten")
+    create_mock.assert_called_once_with(
+        spark=spark,
+        full_table_name="db.klanten",
+        table_definition=table_definition,
+        genereer_sid=genereer_sid,
+    )
+    add_mock.assert_not_called()
+
+
+def test_create_or_update_table_genereer_sid_defaults_to_false(mocked_functions, table_definition):
+    create_mock, _ = mocked_functions
     spark = create_spark_mock_with_table_exists(table_exists=False)
 
     spark_io_utils.create_or_update_table(spark, "db.klanten", table_definition)
 
-    spark.catalog.tableExists.assert_called_once_with("db.klanten")
-    create_mock.assert_called_once_with(spark, "db.klanten", table_definition)
-    add_mock.assert_not_called()
+    assert create_mock.call_args.kwargs["genereer_sid"] is False
 
 
-def test_create_or_update_table_add_columns_if_table_exists(mocked_functions, table_definition):
+def test_create_or_update_table_adds_columns_if_table_exists(mocked_functions, table_definition):
     create_mock, add_mock = mocked_functions
     spark = create_spark_mock_with_table_exists(table_exists=True)
 
-    spark_io_utils.create_or_update_table(spark, "db.klanten", table_definition)
+    spark_io_utils.create_or_update_table(
+        spark, "db.klanten", table_definition, genereer_sid=True
+    )
 
     spark.catalog.tableExists.assert_called_once_with("db.klanten")
-    add_mock.assert_called_once_with(spark, "db.klanten", table_definition)
+    add_mock.assert_called_once_with(
+        spark=spark,
+        full_table_name="db.klanten",
+        table_definition=table_definition,
+    )
     create_mock.assert_not_called()
