@@ -13,3 +13,4 @@ from datateam_moss.initialization import *
 from datateam_moss.verwerk_bbga import *
 from datateam_moss.transform_context import *
 from datateam_moss.file_utils import *
+from datateam_moss.rechtenbeheer import *
